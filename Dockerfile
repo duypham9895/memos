@@ -4,20 +4,18 @@ WORKDIR /frontend-build
 
 COPY ./web/ .
 
-RUN yarn
-RUN yarn build
+RUN yarn && yarn build
 
 # Build backend exec file.
 FROM golang:1.19.3-alpine3.16 AS backend
 WORKDIR /backend-build
 
-RUN apk update
-RUN apk --no-cache add gcc musl-dev
+RUN apk update && apk add --no-cache gcc musl-dev
 
 COPY . .
 COPY --from=frontend /frontend-build/dist ./server/dist
 
-RUN go build -o memos ./bin/server/main.go
+RUN go build -o memos ./main.go
 
 # Make workspace with above generated files.
 FROM alpine:3.16 AS monolithic

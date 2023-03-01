@@ -9,11 +9,15 @@ export const initialGlobalState = async () => {
     appearance: "system" as Appearance,
     systemStatus: {
       allowSignUp: false,
+      disablePublicMemos: false,
       additionalStyle: "",
       additionalScript: "",
       customizedProfile: {
         name: "memos",
-        iconUrl: "/logo.webp",
+        logoUrl: "/logo.png",
+        description: "",
+        locale: "en",
+        appearance: "system",
         externalUrl: "",
       },
     } as SystemStatus,
@@ -30,7 +34,20 @@ export const initialGlobalState = async () => {
   try {
     const { data } = (await api.getSystemStatus()).data;
     if (data) {
-      defaultGlobalState.systemStatus = data;
+      const customizedProfile = data.customizedProfile;
+      defaultGlobalState.systemStatus = {
+        ...data,
+        customizedProfile: {
+          name: customizedProfile.name || "memos",
+          logoUrl: customizedProfile.logoUrl || "/logo.png",
+          description: customizedProfile.description,
+          locale: customizedProfile.locale || "en",
+          appearance: customizedProfile.appearance || "system",
+          externalUrl: "",
+        },
+      };
+      defaultGlobalState.locale = customizedProfile.locale;
+      defaultGlobalState.appearance = customizedProfile.appearance;
     }
   } catch (error) {
     // do nth
@@ -46,6 +63,9 @@ export const useGlobalStore = () => {
     state,
     getState: () => {
       return store.getState().global;
+    },
+    isDev: () => {
+      return state.systemStatus.profile.mode !== "prod";
     },
     fetchSystemStatus: async () => {
       const { data: systemStatus } = (await api.getSystemStatus()).data;

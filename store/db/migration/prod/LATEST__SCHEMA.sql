@@ -23,7 +23,8 @@ CREATE TABLE user (
   email TEXT NOT NULL DEFAULT '',
   nickname TEXT NOT NULL DEFAULT '',
   password_hash TEXT NOT NULL,
-  open_id TEXT NOT NULL UNIQUE
+  open_id TEXT NOT NULL UNIQUE,
+  avatar_url TEXT NOT NULL DEFAULT ''
 );
 
 -- user_setting
@@ -85,4 +86,38 @@ CREATE TABLE memo_resource (
   created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
   UNIQUE(memo_id, resource_id)
+);
+
+-- tag
+CREATE TABLE tag (
+  name TEXT NOT NULL,
+  creator_id INTEGER NOT NULL,
+  UNIQUE(name, creator_id)
+);
+
+-- activity
+CREATE TABLE activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  creator_id INTEGER NOT NULL,
+  created_ts BIGINT NOT NULL DEFAULT (strftime('%s', 'now')),
+  type TEXT NOT NULL DEFAULT '',
+  level TEXT NOT NULL CHECK (level IN ('INFO', 'WARN', 'ERROR')) DEFAULT 'INFO',
+  payload TEXT NOT NULL DEFAULT '{}'
+);
+
+-- storage
+CREATE TABLE storage (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  config TEXT NOT NULL DEFAULT '{}'
+);
+
+-- idp
+CREATE TABLE idp (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL,
+  identifier_filter TEXT NOT NULL DEFAULT '',
+  config TEXT NOT NULL DEFAULT '{}'
 );

@@ -4,11 +4,12 @@ interface Setting {
   locale: Locale;
   appearance: Appearance;
   memoVisibility: Visibility;
-  memoDisplayTsOption: "created_ts" | "updated_ts";
+  resourceVisibility: Visibility;
 }
 
 interface LocalSetting {
   enableFoldMemo: boolean;
+  enableDoubleClickEditing: boolean;
 }
 
 interface UserLocaleSetting {
@@ -26,7 +27,12 @@ interface UserMemoVisibilitySetting {
   value: Visibility;
 }
 
-type UserSetting = UserLocaleSetting | UserAppearanceSetting | UserMemoVisibilitySetting;
+interface UserResourceVisibilitySetting {
+  key: "resourceVisibility";
+  value: Visibility;
+}
+
+type UserSetting = UserLocaleSetting | UserAppearanceSetting | UserMemoVisibilitySetting | UserResourceVisibilitySetting;
 
 interface UserSettingUpsert {
   key: keyof Setting;

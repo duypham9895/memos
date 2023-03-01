@@ -1,8 +1,9 @@
-import { Checkbox, Tooltip } from "@mui/joy";
-import { useCallback, useEffect, useState } from "react";
+import { Button, Checkbox } from "@mui/joy";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import useLoading from "../hooks/useLoading";
 import { useEditorStore, useResourceStore } from "../store/module";
+import { getResourceUrl } from "../utils/resource";
 import Icon from "./Icon";
 import toastHelper from "./Toast";
 import { generateDialog } from "./Dialog";
@@ -47,10 +48,6 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
     });
   }, [resources]);
 
-  const getResourceUrl = useCallback((resource: Resource) => {
-    return `${window.location.origin}/o/r/${resource.id}/${resource.filename}`;
-  }, []);
-
   const handlePreviewBtnClick = (resource: Resource) => {
     const resourceUrl = getResourceUrl(resource);
     if (resource.type.startsWith("image")) {
@@ -82,10 +79,7 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
   return (
     <>
       <div className="dialog-header-container">
-        <p className="title-text">
-          <span className="icon-text">🌄</span>
-          {t("sidebar.resources")}
-        </p>
+        <p className="title-text">{t("sidebar.resources")}</p>
         <button className="btn close-btn" onClick={destroy}>
           <Icon.X className="icon-img" />
         </button>
@@ -98,8 +92,8 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
         ) : (
           <div className="resource-table-container">
             <div className="fields-container">
-              <span className="field-text id-text">ID</span>
               <span className="field-text name-text">{t("resources.name")}</span>
+              <span className="field-text type-text">Type</span>
               <span></span>
             </div>
             {resources.length === 0 ? (
@@ -107,17 +101,11 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
             ) : (
               resources.map((resource, index) => (
                 <div key={resource.id} className="resource-container">
-                  <span className="field-text id-text">{resource.id}</span>
-                  <Tooltip placement="top-start" title={resource.filename}>
-                    <span className="field-text name-text">{resource.filename}</span>
-                  </Tooltip>
+                  <span className="field-text name-text cursor-pointer" onClick={() => handlePreviewBtnClick(resource)}>
+                    {resource.filename}
+                  </span>
+                  <span className="field-text type-text">{resource.type}</span>
                   <div className="flex justify-end">
-                    <Icon.Eye
-                      className=" text-left text-sm leading-6 px-1 mr-2 cursor-pointer hover:opacity-80"
-                      onClick={() => handlePreviewBtnClick(resource)}
-                    >
-                      {t("resources.preview")}
-                    </Icon.Eye>
                     <Checkbox checked={state.checkedArray[index]} onChange={() => handleCheckboxChange(index)} />
                   </div>
                 </div>
@@ -130,13 +118,7 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
             {t("message.count-selected-resources")}: {state.checkedArray.filter((checked) => checked).length}
           </span>
           <div className="flex flex-row justify-start items-center">
-            <div
-              className="text-sm cursor-pointer px-3 py-1 rounded flex flex-row justify-center items-center border border-blue-600 text-blue-600 bg-blue-50 hover:opacity-80"
-              onClick={handleConfirmBtnClick}
-            >
-              <Icon.PlusSquare className=" w-4 h-auto mr-1" />
-              <span>{t("common.confirm")}</span>
-            </div>
+            <Button onClick={handleConfirmBtnClick}>{t("common.confirm")}</Button>
           </div>
         </div>
       </div>

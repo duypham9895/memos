@@ -1,10 +1,12 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGlobalStore } from "../store/module";
 import * as api from "../helpers/api";
 import Icon from "./Icon";
 import { generateDialog } from "./Dialog";
 import toastHelper from "./Toast";
+import LocaleSelect from "./LocaleSelect";
+import AppearanceSelect from "./AppearanceSelect";
 
 type Props = DialogProps;
 
@@ -13,11 +15,7 @@ const UpdateCustomizedProfileDialog: React.FC<Props> = ({ destroy }: Props) => {
   const globalStore = useGlobalStore();
   const [state, setState] = useState<CustomizedProfile>(globalStore.state.systemStatus.customizedProfile);
 
-  useEffect(() => {
-    // do nth
-  }, []);
-
-  const handleCloseBtnClick = () => {
+  const handleCloseButtonClick = () => {
     destroy();
   };
 
@@ -30,18 +28,56 @@ const UpdateCustomizedProfileDialog: React.FC<Props> = ({ destroy }: Props) => {
     });
   };
 
-  const handleIconUrlChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUrlChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
     setState((state) => {
       return {
         ...state,
-        iconUrl: e.target.value as string,
+        logoUrl: e.target.value as string,
       };
     });
   };
 
-  const handleSaveBtnClick = async () => {
-    if (state.name === "" || state.iconUrl === "") {
-      toastHelper.error(t("message.fill-all"));
+  const handleDescriptionChanged = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setState((state) => {
+      return {
+        ...state,
+        description: e.target.value as string,
+      };
+    });
+  };
+
+  const handleLocaleSelectChange = (locale: Locale) => {
+    setState((state) => {
+      return {
+        ...state,
+        locale: locale,
+      };
+    });
+  };
+
+  const handleAppearanceSelectChange = (appearance: Appearance) => {
+    setState((state) => {
+      return {
+        ...state,
+        appearance: appearance,
+      };
+    });
+  };
+
+  const handleRestoreButtonClick = () => {
+    setState({
+      name: "memos",
+      logoUrl: "/logo.png",
+      description: "",
+      locale: "en",
+      appearance: "system",
+      externalUrl: "",
+    });
+  };
+
+  const handleSaveButtonClick = async () => {
+    if (state.name === "") {
+      toastHelper.error("Please fill server name");
       return;
     }
 
@@ -61,27 +97,40 @@ const UpdateCustomizedProfileDialog: React.FC<Props> = ({ destroy }: Props) => {
 
   return (
     <>
-      <div className="dialog-header-container !w-64">
+      <div className="dialog-header-container">
         <p className="title-text">{t("setting.system-section.customize-server.title")}</p>
-        <button className="btn close-btn" onClick={handleCloseBtnClick}>
+        <button className="btn close-btn" onClick={handleCloseButtonClick}>
           <Icon.X />
         </button>
       </div>
-      <div className="dialog-content-container">
+      <div className="dialog-content-container !w-80">
         <p className="text-sm mb-1">
           {t("setting.system-section.server-name")}
           <span className="text-sm text-gray-400 ml-1">({t("setting.system-section.customize-server.default")})</span>
         </p>
         <input type="text" className="input-text" value={state.name} onChange={handleNameChanged} />
         <p className="text-sm mb-1 mt-2">{t("setting.system-section.customize-server.icon-url")}</p>
-        <input type="text" className="input-text" value={state.iconUrl} onChange={handleIconUrlChanged} />
-        <div className="mt-4 w-full flex flex-row justify-end items-center space-x-2">
-          <span className="btn-text" onClick={handleCloseBtnClick}>
-            {t("common.cancel")}
-          </span>
-          <span className="btn-primary" onClick={handleSaveBtnClick}>
-            {t("common.save")}
-          </span>
+        <input type="text" className="input-text" value={state.logoUrl} onChange={handleLogoUrlChanged} />
+        <p className="text-sm mb-1 mt-2">Description</p>
+        <input type="text" className="input-text" value={state.description} onChange={handleDescriptionChanged} />
+        <p className="text-sm mb-1 mt-2">Server locale</p>
+        <LocaleSelect className="w-full" value={state.locale} onChange={handleLocaleSelectChange} />
+        <p className="text-sm mb-1 mt-2">Server appearance</p>
+        <AppearanceSelect className="w-full" value={state.appearance} onChange={handleAppearanceSelectChange} />
+        <div className="mt-4 w-full flex flex-row justify-between items-center space-x-2">
+          <div className="flex flex-row justify-start items-center">
+            <button className="btn-normal" onClick={handleRestoreButtonClick}>
+              {t("common.restore")}
+            </button>
+          </div>
+          <div className="flex flex-row justify-end items-center">
+            <button className="btn-text" onClick={handleCloseButtonClick}>
+              {t("common.cancel")}
+            </button>
+            <button className="btn-primary" onClick={handleSaveButtonClick}>
+              {t("common.save")}
+            </button>
+          </div>
         </div>
       </div>
     </>

@@ -1,5 +1,8 @@
 package api
 
+// MaxContentLength means the max memo content bytes is 1MB.
+const MaxContentLength = 1 << 30
+
 // Visibility is the type of a visibility.
 type Visibility string
 
@@ -37,16 +40,16 @@ type Memo struct {
 	Content    string     `json:"content"`
 	Visibility Visibility `json:"visibility"`
 	Pinned     bool       `json:"pinned"`
-	DisplayTs  int64      `json:"displayTs"`
 
 	// Related fields
-	Creator      *User       `json:"creator"`
+	CreatorName  string      `json:"creatorName"`
 	ResourceList []*Resource `json:"resourceList"`
 }
 
 type MemoCreate struct {
 	// Standard fields
-	CreatorID int
+	CreatorID int    `json:"-"`
+	CreatedTs *int64 `json:"createdTs"`
 
 	// Domain specific fields
 	Visibility Visibility `json:"visibility"`
@@ -57,7 +60,7 @@ type MemoCreate struct {
 }
 
 type MemoPatch struct {
-	ID int
+	ID int `json:"-"`
 
 	// Standard fields
 	CreatedTs *int64 `json:"createdTs"`
@@ -73,11 +76,11 @@ type MemoPatch struct {
 }
 
 type MemoFind struct {
-	ID *int `json:"id"`
+	ID *int
 
 	// Standard fields
-	RowStatus *RowStatus `json:"rowStatus"`
-	CreatorID *int       `json:"creatorId"`
+	RowStatus *RowStatus
+	CreatorID *int
 
 	// Domain specific fields
 	Pinned         *bool
@@ -85,8 +88,8 @@ type MemoFind struct {
 	VisibilityList []Visibility
 
 	// Pagination
-	Limit  int
-	Offset int
+	Limit  *int
+	Offset *int
 }
 
 type MemoDelete struct {

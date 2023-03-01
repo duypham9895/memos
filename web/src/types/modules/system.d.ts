@@ -5,7 +5,10 @@ interface Profile {
 
 interface CustomizedProfile {
   name: string;
-  iconUrl: string;
+  logoUrl: string;
+  description: string;
+  locale: Locale;
+  appearance: Appearance;
   externalUrl: string;
 }
 
@@ -15,9 +18,11 @@ interface SystemStatus {
   dbSize: number;
   // System settings
   allowSignUp: boolean;
+  disablePublicMemos: boolean;
   additionalStyle: string;
   additionalScript: string;
   customizedProfile: CustomizedProfile;
+  storageServiceId: number;
 }
 
 interface SystemSetting {

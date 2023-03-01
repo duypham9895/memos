@@ -1,16 +1,15 @@
-import { uniqBy } from "lodash";
+import { omit, uniqBy } from "lodash-es";
 import * as api from "../../helpers/api";
 import { DEFAULT_MEMO_LIMIT } from "../../helpers/consts";
 import { useUserStore } from "./";
 import store, { useAppSelector } from "../";
-import { createMemo, deleteMemo, patchMemo, setIsFetching, setMemos, setTags } from "../reducer/memo";
+import { createMemo, deleteMemo, patchMemo, setIsFetching, setMemos } from "../reducer/memo";
 
 const convertResponseModelMemo = (memo: Memo): Memo => {
   return {
     ...memo,
     createdTs: memo.createdTs * 1000,
     updatedTs: memo.updatedTs * 1000,
-    displayTs: memo.displayTs * 1000,
   };
 };
 
@@ -85,14 +84,6 @@ export const useMemoStore = () => {
 
       return await fetchMemoById(memoId);
     },
-    updateTagsState: async () => {
-      const tagFind: TagFind = {};
-      if (userStore.isVisitorMode()) {
-        tagFind.creatorId = userStore.getUserIdFromPath();
-      }
-      const { data } = (await api.getTagList(tagFind)).data;
-      store.dispatch(setTags(data));
-    },
     getLinkedMemos: async (memoId: MemoId): Promise<Memo[]> => {
       const regex = new RegExp(`[@(.+?)](${memoId})`);
       return state.memos.filter((m) => m.content.match(regex));
@@ -106,7 +97,7 @@ export const useMemoStore = () => {
     patchMemo: async (memoPatch: MemoPatch): Promise<Memo> => {
       const { data } = (await api.patchMemo(memoPatch)).data;
       const memo = convertResponseModelMemo(data);
-      store.dispatch(patchMemo(memo));
+      store.dispatch(patchMemo(omit(memo, "pinned")));
       return memo;
     },
     pinMemo: async (memoId: MemoId) => {

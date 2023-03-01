@@ -19,8 +19,8 @@ type MigrationHistoryFind struct {
 	Version *string
 }
 
-func (db *DB) FindMigrationHistory(ctx context.Context, find *MigrationHistoryFind) (*MigrationHistory, error) {
-	tx, err := db.Db.BeginTx(ctx, nil)
+func (db *DB) FindMigrationHistoryList(ctx context.Context, find *MigrationHistoryFind) ([]*MigrationHistory, error) {
+	tx, err := db.DBInstance.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -31,16 +31,11 @@ func (db *DB) FindMigrationHistory(ctx context.Context, find *MigrationHistoryFi
 		return nil, err
 	}
 
-	if len(list) == 0 {
-		return nil, nil
-	}
-
-	migrationHistory := list[0]
-	return migrationHistory, nil
+	return list, nil
 }
 
 func (db *DB) UpsertMigrationHistory(ctx context.Context, upsert *MigrationHistoryUpsert) (*MigrationHistory, error) {
-	tx, err := db.Db.BeginTx(ctx, nil)
+	tx, err := db.DBInstance.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}

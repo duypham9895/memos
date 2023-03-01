@@ -4,6 +4,22 @@
   > .memo-content-text {
     @apply w-full max-w-full word-break text-base leading-6;
 
+    > h1 {
+      @apply text-5xl leading-normal font-bold;
+    }
+
+    > h2 {
+      @apply text-3xl leading-normal font-medium;
+    }
+
+    > h3 {
+      @apply text-xl leading-normal font-medium;
+    }
+
+    > h4 {
+      @apply text-lg;
+    }
+
     > p {
       @apply w-full h-auto mb-1 last:mb-0 text-base;
       min-height: 24px;
@@ -18,7 +34,7 @@
     }
 
     .tag-span {
-      @apply inline-block w-auto font-mono text-blue-600 dark:text-blue-400 cursor-pointer;
+      @apply inline-block w-auto text-blue-600 dark:text-blue-400 cursor-pointer;
     }
 
     .link {
@@ -48,10 +64,20 @@
     }
 
     pre {
-      @apply w-full my-1 p-3 rounded bg-gray-100 dark:bg-zinc-600 whitespace-pre-wrap;
+      @apply w-full my-1 p-3 rounded bg-gray-100 dark:bg-zinc-600 whitespace-pre-wrap relative;
 
       code {
         @apply block;
+      }
+
+      &:hover {
+        .codeblock-copy-btn {
+          @apply flex;
+        }
+      }
+
+      .codeblock-copy-btn {
+        @apply btn-normal absolute hidden top-2 right-2 border-solid border-2;
       }
     }
 

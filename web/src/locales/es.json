@@ -27,7 +27,7 @@
         "share": "Compartir",
         "archive": "Archivar",
         "basic": "Básico",
-        "admin": "Admin",
+        "admin": "Administrador",
         "explore": "Explorar",
         "sign-in": "Iniciar sesión",
         "sign-up": "Registrarse",
@@ -37,17 +37,19 @@
         "shortcuts": "Atajos",
         "title": "Título",
         "filter": "Filtros",
-        "tags": "Tags",
+        "tags": "Etiquetas",
         "yourself": "Tu",
         "archived-at": "Archivado en",
         "changed": "cambiado",
         "update-on": "Actualización de",
-        "fold": "Fold",
+        "fold": "Plegar",
         "expand": "Expandir",
         "image": "Imagen",
         "link": "Enlace",
         "vacuum": "Vaciar",
-        "select": "Seleccionar"
+        "select": "Seleccionar",
+        "database": "Base de datos",
+        "avatar": "Avatar"
     },
     "slogan": "Un código abierto, centro de notas autoalojado con la gestión del conocimiento y la socialización.",
     "auth": {
@@ -58,7 +60,7 @@
     "sidebar": {
         "daily-review": "Resumen diario",
         "resources": "Recursos",
-        "setting": "Configuración",
+        "setting": "Ajustes",
         "archived": "Archivado"
     },
     "daily-review": {
@@ -72,13 +74,13 @@
         "preview": "Vista previa",
         "copy-link": "Copiar Enlace",
         "delete-resource": "Borrar Recurso",
-        "warning-text": "Seguro que quieres eliminar este recurso? ESTA ACCIÓN ES IRREVERSIBLE❗.",
+        "warning-text": "¿Está seguro de eliminar este recurso? ESTA ACCIÓN ES IRREVERSIBLE❗",
         "linked-amount": "Importe de la nota vinculado",
         "rename": "Renombrar",
-        "clear-unused-resources": "Borrar los recursos no utilizados",
-        "warning-text-unused": "Seguro que quieres eliminar estos recursos no utilizados? ESTA ACCIÓN ES IRREVERSIBLE❗.",
+        "warning-text-unused": "¿Está seguro de eliminar estos recursos no utilizados? ESTA ACCIÓN ES IRREVERSIBLE❗",
         "no-unused-resources": "No hay recursos sin utilizar",
-        "name": "Name"
+        "name": "Nombre",
+        "clear": "Limpiar"
     },
     "archived": {
         "archived-memos": "Notas Archivadas",
@@ -101,7 +103,8 @@
         "visibility": {
             "private": "Solo visible para ti",
             "protected": "Visible para los miembros",
-            "public": "Todo el mundo lo puede ver"
+            "public": "Todo el mundo lo puede ver",
+            "disabled": "Las notas públicas están deshabilitadas"
         }
     },
     "memo-list": {
@@ -120,12 +123,12 @@
     "filter": {
         "new-filter": "Nuevo Filtro",
         "type": {
-            "tag": "Tag",
-            "type": "Type",
-            "text": "Text",
-            "display-time": "Display Time",
-            "visibility": "Visibility"
-          },
+            "tag": "Etiqueta",
+            "type": "Tipo",
+            "text": "Texto",
+            "display-time": "Fecha y Hora de Visualización",
+            "visibility": "Visibilidad"
+        },
         "operator": {
             "contains": "Contiene",
             "not-contains": "No contiene",
@@ -135,13 +138,13 @@
             "after": "Después"
         },
         "value": {
-            "not-tagged": "Sin tags",
+            "not-tagged": "Sin etiquetas",
             "linked": "Con enlaces"
         },
         "text-placeholder": "Empieza por ^ para usar regex"
     },
     "tag-list": {
-        "tip-text": "Escribe `#tag ` para crearlo"
+        "tip-text": "Escribe '#etiqueta' para crearlo"
     },
     "search": {
         "quickly-filter": "Filtro rápido"
@@ -165,38 +168,52 @@
             "mobile-editor-style": "Estilo del editor móvil",
             "default-memo-sort-option": "Hora de visualización de la nota",
             "created_ts": "Hora de Creación",
-            "updated_ts": "Hora de Actualización"
+            "updated_ts": "Hora de Actualización",
+            "enable-double-click": "Habilitar doble clic para editar"
         },
         "member-section": {
             "create-a-member": "Crear un miembro"
         },
         "system-section": {
-            "server-name": "Server Name",
+            "server-name": "Nombre del Servidor",
             "customize-server": {
-                "title": "Customize Server",
-                "default": "Default is memos",
-                "icon-url": "Icon URL"
+                "title": "Personalizar Servidor",
+                "default": "Por defecto es memos",
+                "icon-url": "Icono URL"
             },
             "database-file-size": "Tamaño de la Base de Datos",
             "allow-user-signup": "Permitir el registro de usuarios",
             "additional-style": "Estilos adicionales",
             "additional-script": "Scripts adicionales",
-            "additional-style-placeholder": "Códigos CSS adicionales",
-            "additional-script-placeholder": "Códigos JavaScript adicionales"
+            "additional-style-placeholder": "Código CSS adicional",
+            "additional-script-placeholder": "Código JavaScript adicional",
+            "disable-public-memos": "Deshabilitar notas públicas"
         },
         "apperance-option": {
             "system": "Según el sistema",
             "light": "Siempre claro",
             "dark": "Siempre oscuro"
+        },
+        "storage": "Almacenamiento",
+        "sso": "SSO",
+        "storage-section": {
+            "storage-services-list": "Lista de servicios de almacenamiento",
+            "create-a-service": "Crear un servicio",
+            "update-a-service": "Actualizar un servicio",
+            "warning-text": "¿Está seguro de eliminar este servicio de almacenamiento? ESTA ACCIÓN ES IRREVERSIBLE❗",
+            "delete-storage": "Eliminar almacenamiento"
         }
     },
     "amount-text": {
         "memo_one": "NOTA",
+        "memo_many": "NOTAS",
         "memo_other": "NOTAS",
         "tag_one": "ETIQUETA",
+        "tag_many": "ETIQUETAS",
         "tag_other": "ETIQUETAS",
-        "day_one": "DÍA",
-        "day_other": "DÍAS"
+        "day_one": "DIA",
+        "day_many": "DIAS",
+        "day_other": "DIAS"
     },
     "message": {
         "no-memos": "no hay notas 🌃",
@@ -217,8 +234,8 @@
         "password-changed": "Contraseña cambiada",
         "private-only": "Esta nota es privada.",
         "copied": "Copiado",
-        "succeed-copy-content": "Contenido copiado al portapapeles.",
-        "succeed-copy-link": "Enlace copiado al portapapeles.",
+        "succeed-copy-content": "Contenido copiado correctamente.",
+        "succeed-copy-link": "Enlace copiado correctamente.",
         "change-resource-filename": "Cambiar el nombre de un archivo de recursos",
         "resource-filename-updated": "El nombre del archivo de recursos se ha cambiado correctamente..",
         "invalid-resource-filename": "Nombre de archivo de recursos no válido.",
@@ -229,27 +246,29 @@
         "too-long": "Demasiado largo",
         "not-allow-space": "No se admiten espacios",
         "not-allow-chinese": "El chino no está permitido",
-        "succeed-vacuum-database": "Succeed to vacuum database",
-        "succeed-update-additional-style": "Succeed to update additional style",
-        "succeed-copy-resource-link": "Succeed to copy resource link to clipboard",
-        "succeed-update-customized-profile": "Succeed to update customized profile",
-        "succeed-update-additional-script": "Succeed to update additional script",
-        "update-succeed": "Update succeed"
+        "succeed-vacuum-database": "Exito al limpiar la base de datos",
+        "succeed-update-additional-style": "Estilo adicional actualizado con éxito.",
+        "succeed-copy-resource-link": "Enlace del recurso copiado con éxito.",
+        "succeed-update-customized-profile": "Perfil personalizado con éxito.",
+        "succeed-update-additional-script": "Script adicional actualizado con éxito.",
+        "update-succeed": "Actualización exitosa",
+        "succeed-copy-code": "Código copiado con éxito.",
+        "page-not-found": "404 - Página no encontrada 😥"
     },
     "days": {
-      "monday": "Lunes",
-      "mon": "Lun",
-      "tuesday": "Martes",
-      "tue": "Mart",
-      "wednesday": "Miércoles",
-      "wed": "Miérc",
-      "thursday": "Jueves",
-      "thu": "Juev",
-      "friday": "Viernes",
-      "fri": "Vier",
-      "saturday": "Sábado",
-      "sat": "Sáb",
-      "sunday": "Domingo",
-      "sun": "Dom"
+        "monday": "Lunes",
+        "mon": "Lun",
+        "tuesday": "Martes",
+        "tue": "Mart",
+        "wednesday": "Miércoles",
+        "wed": "Miérc",
+        "thursday": "Jueves",
+        "thu": "Juev",
+        "friday": "Viernes",
+        "fri": "Vier",
+        "saturday": "Sábado",
+        "sat": "Sáb",
+        "sunday": "Domingo",
+        "sun": "Dom"
     }
 }

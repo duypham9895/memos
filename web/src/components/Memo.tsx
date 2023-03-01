@@ -1,3 +1,4 @@
+import { Tooltip } from "@mui/joy";
 import copy from "copy-to-clipboard";
 import dayjs from "dayjs";
 import { memo, useEffect, useRef, useState } from "react";
@@ -10,12 +11,12 @@ import MemoContent from "./MemoContent";
 import MemoResources from "./MemoResources";
 import showShareMemo from "./ShareMemoDialog";
 import showPreviewImageDialog from "./PreviewImageDialog";
+import showEmbedMemoDialog from "./EmbedMemoDialog";
 import showChangeMemoCreatedTsDialog from "./ChangeMemoCreatedTsDialog";
 import "../less/memo.less";
 
 interface Props {
   memo: Memo;
-  highlightWord?: string;
 }
 
 export const getFormatedMemoTimeStr = (time: number, locale = "en"): string => {
@@ -27,22 +28,23 @@ export const getFormatedMemoTimeStr = (time: number, locale = "en"): string => {
 };
 
 const Memo: React.FC<Props> = (props: Props) => {
-  const { memo, highlightWord } = props;
+  const { memo } = props;
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const editorStore = useEditorStore();
   const locationStore = useLocationStore();
   const userStore = useUserStore();
   const memoStore = useMemoStore();
-  const [displayTimeStr, setDisplayTimeStr] = useState<string>(getFormatedMemoTimeStr(memo.displayTs, i18n.language));
+  const [createdTimeStr, setCreatedTimeStr] = useState<string>(getFormatedMemoTimeStr(memo.createdTs, i18n.language));
   const memoContainerRef = useRef<HTMLDivElement>(null);
   const isVisitorMode = userStore.isVisitorMode();
+  const updatedTimeStr = getFormatedMemoTimeStr(memo.updatedTs, i18n.language);
 
   useEffect(() => {
     let intervalFlag: any = -1;
-    if (Date.now() - memo.displayTs < 1000 * 60 * 60 * 24) {
+    if (Date.now() - memo.createdTs < 1000 * 60 * 60 * 24) {
       intervalFlag = setInterval(() => {
-        setDisplayTimeStr(getFormatedMemoTimeStr(memo.displayTs, i18n.language));
+        setCreatedTimeStr(getFormatedMemoTimeStr(memo.createdTs, i18n.language));
       }, 1000 * 1);
     }
 
@@ -53,6 +55,10 @@ const Memo: React.FC<Props> = (props: Props) => {
 
   const handleViewMemoDetailPage = () => {
     navigate(`/m/${memo.id}`);
+  };
+
+  const handleShowEmbedMemoDialog = () => {
+    showEmbedMemoDialog(memo.id);
   };
 
   const handleCopyContent = () => {
@@ -147,6 +153,10 @@ const Memo: React.FC<Props> = (props: Props) => {
   };
 
   const handleMemoContentDoubleClick = (e: React.MouseEvent) => {
+    const loginUser = userStore.state.user;
+    if (loginUser && !loginUser.localSetting.enableDoubleClickEditing) {
+      return;
+    }
     const targetEl = e.target as HTMLElement;
 
     if (targetEl.className === "tag-span") {
@@ -158,7 +168,7 @@ const Memo: React.FC<Props> = (props: Props) => {
     editorStore.setEditMemoWithId(memo.id);
   };
 
-  const handleMemoDisplayTimeClick = () => {
+  const handleMemoCreatedTimeClick = () => {
     showChangeMemoCreatedTsDialog(memo.id);
   };
 
@@ -176,9 +186,11 @@ const Memo: React.FC<Props> = (props: Props) => {
       {memo.pinned && <div className="corner-container"></div>}
       <div className="memo-top-wrapper">
         <div className="status-text-container">
-          <span className="time-text" onDoubleClick={handleMemoDisplayTimeClick}>
-            {displayTimeStr}
-          </span>
+          <Tooltip title={`Updated at ${updatedTimeStr}`} placement="top" arrow>
+            <span className="time-text" onDoubleClick={handleMemoCreatedTimeClick}>
+              {createdTimeStr}
+            </span>
+          </Tooltip>
           {memo.visibility !== "PRIVATE" && !isVisitorMode && (
             <span
               className={`status-text ${memo.visibility.toLocaleLowerCase()}`}
@@ -215,6 +227,9 @@ const Memo: React.FC<Props> = (props: Props) => {
                 <span className="btn" onClick={handleViewMemoDetailPage}>
                   {t("memo.view-detail")}
                 </span>
+                <span className="btn" onClick={handleShowEmbedMemoDialog}>
+                  Embed memo
+                </span>
                 <span className="btn archive-btn" onClick={handleArchiveMemoClick}>
                   {t("common.archive")}
                 </span>
@@ -225,7 +240,6 @@ const Memo: React.FC<Props> = (props: Props) => {
       </div>
       <MemoContent
         content={memo.content}
-        highlightWord={highlightWord}
         onMemoContentClick={handleMemoContentClick}
         onMemoContentDoubleClick={handleMemoContentDoubleClick}
       />

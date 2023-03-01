@@ -1,10 +1,11 @@
 import { Select, Option } from "@mui/joy";
+import { QRCodeSVG } from "qrcode.react";
 import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import copy from "copy-to-clipboard";
-import { toLower } from "lodash";
+import { toLower } from "lodash-es";
 import toImage from "../labs/html2image";
-import { useMemoStore, useUserStore } from "../store/module";
+import { useGlobalStore, useMemoStore, useUserStore } from "../store/module";
 import { VISIBILITY_SELECTOR_ITEMS } from "../helpers/consts";
 import * as utils from "../helpers/utils";
 import { getMemoStats } from "../helpers/api";
@@ -23,7 +24,6 @@ interface Props extends DialogProps {
 interface State {
   memoAmount: number;
   memoVisibility: string;
-  generatedImgUrl: string;
 }
 
 const ShareMemoDialog: React.FC<Props> = (props: Props) => {
@@ -31,17 +31,19 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const { t } = useTranslation();
   const userStore = useUserStore();
   const memoStore = useMemoStore();
+  const globalStore = useGlobalStore();
   const user = userStore.state.user as User;
+  const { systemStatus } = globalStore.state;
   const [state, setState] = useState<State>({
     memoAmount: 0,
     memoVisibility: propsMemo.visibility,
-    generatedImgUrl: "",
   });
+  const createLoadingState = useLoading(false);
   const loadingState = useLoading();
   const memoElRef = useRef<HTMLDivElement>(null);
   const memo = {
     ...propsMemo,
-    createdAtStr: utils.getDateTimeString(propsMemo.displayTs),
+    createdAtStr: utils.getDateTimeString(propsMemo.createdTs),
   };
   const createdDays = Math.ceil((Date.now() - utils.getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24);
 
@@ -61,45 +63,36 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
       });
   }, []);
 
-  useEffect(() => {
-    if (loadingState.isLoading) {
-      return;
-    }
-
-    if (!memoElRef.current) {
-      return;
-    }
-
-    toImage(memoElRef.current, {
-      pixelRatio: window.devicePixelRatio * 2,
-    })
-      .then((url) => {
-        setState((state) => {
-          return {
-            ...state,
-            generatedImgUrl: url,
-          };
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  }, [loadingState.isLoading]);
-
   const handleCloseBtnClick = () => {
     destroy();
   };
 
   const handleDownloadBtnClick = () => {
-    const a = document.createElement("a");
-    a.href = state.generatedImgUrl;
-    a.download = `memos-${utils.getDateTimeString(Date.now())}.png`;
-    a.click();
+    if (!memoElRef.current) {
+      return;
+    }
+
+    createLoadingState.setLoading();
+
+    toImage(memoElRef.current, {
+      pixelRatio: window.devicePixelRatio * 2,
+    })
+      .then((url) => {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `memos-${utils.getDateTimeString(Date.now())}.png`;
+        a.click();
+
+        createLoadingState.setFinish();
+      })
+      .catch((err) => {
+        console.error(err);
+      });
   };
 
   const handleCopyLinkBtnClick = () => {
     copy(`${window.location.origin}/m/${memo.id}`);
-    toastHelper.success(t("message.succeed-copy-content"));
+    toastHelper.success(t("message.succeed-copy-link"));
   };
 
   const memoVisibilityOptionSelectorItems = VISIBILITY_SELECTOR_ITEMS.map((item) => {
@@ -124,30 +117,36 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   return (
     <>
       <div className="dialog-header-container">
-        <p className="title-text">
-          <span className="icon-text">🌄</span>
-          {t("common.share")} Memo
-        </p>
+        <p className="title-text">{t("common.share")} Memo</p>
         <button className="btn close-btn" onClick={handleCloseBtnClick}>
           <Icon.X className="icon-img" />
         </button>
       </div>
       <div className="dialog-content-container">
         <div className="memo-container" ref={memoElRef}>
-          {state.generatedImgUrl !== "" && <img className="memo-shortcut-img" src={state.generatedImgUrl} />}
           <span className="time-text">{memo.createdAtStr}</span>
           <div className="memo-content-wrapper">
             <MemoContent content={memo.content} displayConfig={{ enableExpand: false }} />
-            <MemoResources style="col" resourceList={memo.resourceList} />
+            <MemoResources resourceList={memo.resourceList} />
           </div>
           <div className="watermark-container">
+            <div className="logo-container">
+              <img className="logo-img" src={`${systemStatus.customizedProfile.logoUrl || "/logo.png"}`} alt="" />
+            </div>
             <div className="userinfo-container">
               <span className="name-text">{user.nickname || user.username}</span>
               <span className="usage-text">
                 {state.memoAmount} MEMOS / {createdDays} DAYS
               </span>
             </div>
-            <img className="logo-img" src="/logo.webp" alt="" />
+            <QRCodeSVG
+              value={`${window.location.origin}/m/${memo.id}`}
+              size={64}
+              bgColor={"#F3F4F6"}
+              fgColor={"#4B5563"}
+              level={"L"}
+              includeMargin={false}
+            />
           </div>
         </div>
         <div className="px-4 py-3 w-full flex flex-row justify-between items-center">
@@ -167,8 +166,8 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
             ))}
           </Select>
           <div className="flex flex-row justify-end items-center">
-            <button disabled={state.generatedImgUrl === ""} className="btn-normal mr-2" onClick={handleDownloadBtnClick}>
-              {state.generatedImgUrl === "" ? (
+            <button disabled={createLoadingState.isLoading} className="btn-normal mr-2" onClick={handleDownloadBtnClick}>
+              {createLoadingState.isLoading ? (
                 <Icon.Loader className="w-4 h-auto mr-1 animate-spin" />
               ) : (
                 <Icon.Download className="w-4 h-auto mr-1" />

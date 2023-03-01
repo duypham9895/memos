@@ -15,9 +15,6 @@ build
 # Jetbrains
 .idea
 
-# vscode
-.vscode
-
 bin/air
 
 *env.*

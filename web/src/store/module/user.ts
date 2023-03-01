@@ -10,11 +10,12 @@ const defaultSetting: Setting = {
   locale: "en",
   appearance: getSystemColorScheme(),
   memoVisibility: "PRIVATE",
-  memoDisplayTsOption: "created_ts",
+  resourceVisibility: "PRIVATE",
 };
 
 const defaultLocalSetting: LocalSetting = {
   enableFoldMemo: true,
+  enableDoubleClickEditing: true,
 };
 
 export const convertResponseModelUser = (user: User): User => {
@@ -91,7 +92,6 @@ const doSignIn = async () => {
 };
 
 const doSignOut = async () => {
-  store.dispatch(setUser());
   await api.signout();
 };
 
@@ -133,9 +133,9 @@ export const useUserStore = () => {
       });
       await doSignIn();
     },
-    upsertLocalSetting: async (key: keyof LocalSetting, value: any) => {
-      storage.set({ localSetting: { [key]: value } });
-      store.dispatch(patchUser({ localSetting: { [key]: value } }));
+    upsertLocalSetting: async (localSetting: LocalSetting) => {
+      storage.set({ localSetting });
+      store.dispatch(patchUser({ localSetting }));
     },
     patchUser: async (userPatch: UserPatch): Promise<void> => {
       const { data } = (await api.patchUser(userPatch)).data;
