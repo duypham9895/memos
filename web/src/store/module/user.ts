@@ -1,21 +1,22 @@
+import { camelCase } from "lodash-es";
+import * as api from "@/helpers/api";
+import storage from "@/helpers/storage";
+import { UNKNOWN_ID } from "@/helpers/consts";
+import { getSystemColorScheme } from "@/helpers/utils";
 import store, { useAppSelector } from "..";
-import * as api from "../../helpers/api";
-import * as storage from "../../helpers/storage";
-import { UNKNOWN_ID } from "../../helpers/consts";
-import { getSystemColorScheme } from "../../helpers/utils";
 import { setAppearance, setLocale } from "../reducer/global";
-import { setUser, patchUser, setHost, setOwner } from "../reducer/user";
+import { setUser, patchUser, setHost, setUserById } from "../reducer/user";
 
 const defaultSetting: Setting = {
   locale: "en",
   appearance: getSystemColorScheme(),
   memoVisibility: "PRIVATE",
-  resourceVisibility: "PRIVATE",
 };
 
 const defaultLocalSetting: LocalSetting = {
-  enableFoldMemo: true,
   enableDoubleClickEditing: true,
+  dailyReviewTimeOffset: 0,
+  enableAutoCollapse: true,
 };
 
 export const convertResponseModelUser = (user: User): User => {
@@ -30,7 +31,7 @@ export const convertResponseModelUser = (user: User): User => {
 
   if (user.userSettingList) {
     for (const userSetting of user.userSettingList) {
-      (setting as any)[userSetting.key] = JSON.parse(userSetting.value);
+      (setting as any)[camelCase(userSetting.key)] = JSON.parse(userSetting.value);
     }
   }
 
@@ -50,14 +51,6 @@ export const initialUserState = async () => {
     store.dispatch(setHost(convertResponseModelUser(systemStatus.host)));
   }
 
-  const ownerUserId = getUserIdFromPath();
-  if (ownerUserId) {
-    const { data: owner } = (await api.getUserById(ownerUserId)).data;
-    if (owner) {
-      store.dispatch(setOwner(convertResponseModelUser(owner)));
-    }
-  }
-
   const { data } = (await api.getMyselfUser()).data;
   if (data) {
     const user = convertResponseModelUser(data);
@@ -72,7 +65,7 @@ export const initialUserState = async () => {
 };
 
 const getUserIdFromPath = () => {
-  const { pathname } = store.getState().location;
+  const pathname = window.location.pathname;
   const userIdRegex = /^\/u\/(\d+).*/;
   const result = pathname.match(userIdRegex);
   if (result && result.length === 2) {
@@ -99,7 +92,7 @@ export const useUserStore = () => {
   const state = useAppSelector((state) => state.user);
 
   const isVisitorMode = () => {
-    return !(getUserIdFromPath() === undefined);
+    return state.user === undefined || (getUserIdFromPath() && state.user.id !== getUserIdFromPath());
   };
 
   return {
@@ -119,14 +112,16 @@ export const useUserStore = () => {
       }
     },
     getUserById: async (userId: UserId) => {
-      const { data: user } = (await api.getUserById(userId)).data;
-      if (user) {
-        return convertResponseModelUser(user);
+      const { data } = (await api.getUserById(userId)).data;
+      if (data) {
+        const user = convertResponseModelUser(data);
+        store.dispatch(setUserById(user));
+        return user;
       } else {
         return undefined;
       }
     },
-    upsertUserSetting: async (key: keyof Setting, value: any) => {
+    upsertUserSetting: async (key: string, value: any) => {
       await api.upsertUserSetting({
         key: key as any,
         value: JSON.stringify(value),

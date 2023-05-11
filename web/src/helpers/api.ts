@@ -10,6 +10,10 @@ export function getSystemStatus() {
   return axios.get<ResponseObject<SystemStatus>>("/api/status");
 }
 
+export function getSystemSetting() {
+  return axios.get<ResponseObject<SystemSetting[]>>("/api/system/setting");
+}
+
 export function upsertSystemSetting(systemSetting: SystemSetting) {
   return axios.post<ResponseObject<SystemSetting>>("/api/system/setting", systemSetting);
 }
@@ -160,6 +164,17 @@ export function getResourceList() {
   return axios.get<ResponseObject<Resource[]>>("/api/resource");
 }
 
+export function getResourceListWithLimit(resourceFind?: ResourceFind) {
+  const queryList = [];
+  if (resourceFind?.offset) {
+    queryList.push(`offset=${resourceFind.offset}`);
+  }
+  if (resourceFind?.limit) {
+    queryList.push(`limit=${resourceFind.limit}`);
+  }
+  return axios.get<ResponseObject<Resource[]>>(`/api/resource?${queryList.join("&")}`);
+}
+
 export function createResource(resourceCreate: ResourceCreate) {
   return axios.post<ResponseObject<Resource>>("/api/resource", resourceCreate);
 }
@@ -244,6 +259,14 @@ export function patchIdentityProvider(identityProviderPatch: IdentityProviderPat
 
 export function deleteIdentityProvider(id: IdentityProviderId) {
   return axios.delete(`/api/idp/${id}`);
+}
+
+export function postChatCompletion(messages: any[]) {
+  return axios.post<ResponseObject<string>>(`/api/openai/chat-completion`, messages);
+}
+
+export function checkOpenAIEnabled() {
+  return axios.get<ResponseObject<boolean>>(`/api/openai/enabled`);
 }
 
 export async function getRepoStarCount() {

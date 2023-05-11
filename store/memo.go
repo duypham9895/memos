@@ -53,6 +53,11 @@ func (s *Store) ComposeMemo(ctx context.Context, memo *api.Memo) (*api.Memo, err
 	if err := s.ComposeMemoResourceList(ctx, memo); err != nil {
 		return nil, err
 	}
+	if s.Profile.IsDev() {
+		if err := s.ComposeMemoRelationList(ctx, memo); err != nil {
+			return nil, err
+		}
+	}
 
 	return memo, nil
 }
@@ -179,7 +184,7 @@ func (s *Store) DeleteMemo(ctx context.Context, delete *api.MemoDelete) error {
 	if err := deleteMemo(ctx, tx, delete); err != nil {
 		return FormatError(err)
 	}
-	if err := vacuum(ctx, tx); err != nil {
+	if err := s.vacuumImpl(ctx, tx); err != nil {
 		return err
 	}
 
@@ -193,7 +198,7 @@ func (s *Store) DeleteMemo(ctx context.Context, delete *api.MemoDelete) error {
 
 func createMemoRaw(ctx context.Context, tx *sql.Tx, create *api.MemoCreate) (*memoRaw, error) {
 	set := []string{"creator_id", "content", "visibility"}
-	args := []interface{}{create.CreatorID, create.Content, create.Visibility}
+	args := []any{create.CreatorID, create.Content, create.Visibility}
 	placeholder := []string{"?", "?", "?"}
 
 	if v := create.CreatedTs; v != nil {
@@ -224,7 +229,7 @@ func createMemoRaw(ctx context.Context, tx *sql.Tx, create *api.MemoCreate) (*me
 }
 
 func patchMemoRaw(ctx context.Context, tx *sql.Tx, patch *api.MemoPatch) (*memoRaw, error) {
-	set, args := []string{}, []interface{}{}
+	set, args := []string{}, []any{}
 
 	if v := patch.CreatedTs; v != nil {
 		set, args = append(set, "created_ts = ?"), append(args, *v)
@@ -263,11 +268,37 @@ func patchMemoRaw(ctx context.Context, tx *sql.Tx, patch *api.MemoPatch) (*memoR
 		return nil, FormatError(err)
 	}
 
+	pinnedQuery := `
+		SELECT
+			pinned
+		FROM memo_organizer
+		WHERE memo_id = ? AND user_id = ?
+	`
+	row, err := tx.QueryContext(ctx, pinnedQuery, patch.ID, memoRaw.CreatorID)
+	if err != nil {
+		return nil, FormatError(err)
+	}
+	defer row.Close()
+
+	if !row.Next() {
+		memoRaw.Pinned = false
+	} else {
+		if err := row.Scan(
+			&memoRaw.Pinned,
+		); err != nil {
+			return nil, FormatError(err)
+		}
+	}
+
+	if err := row.Err(); err != nil {
+		return nil, err
+	}
+
 	return &memoRaw, nil
 }
 
 func findMemoRawList(ctx context.Context, tx *sql.Tx, find *api.MemoFind) ([]*memoRaw, error) {
-	where, args := []string{"1 = 1"}, []interface{}{}
+	where, args := []string{"1 = 1"}, []any{}
 
 	if v := find.ID; v != nil {
 		where, args = append(where, "memo.id = ?"), append(args, *v)
@@ -352,7 +383,7 @@ func findMemoRawList(ctx context.Context, tx *sql.Tx, find *api.MemoFind) ([]*me
 }
 
 func deleteMemo(ctx context.Context, tx *sql.Tx, delete *api.MemoDelete) error {
-	where, args := []string{"id = ?"}, []interface{}{delete.ID}
+	where, args := []string{"id = ?"}, []any{delete.ID}
 
 	stmt := `DELETE FROM memo WHERE ` + strings.Join(where, " AND ")
 	result, err := tx.ExecContext(ctx, stmt, args...)

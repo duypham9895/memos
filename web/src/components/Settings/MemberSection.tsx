@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { useUserStore } from "../../store/module";
-import * as api from "../../helpers/api";
-import toastHelper from "../Toast";
-import Dropdown from "../common/Dropdown";
+import { useUserStore } from "@/store/module";
+import * as api from "@/helpers/api";
+import Dropdown from "../kit/Dropdown";
 import { showCommonDialog } from "../Dialog/CommonDialog";
 import showChangeMemberPasswordDialog from "../ChangeMemberPasswordDialog";
-import "../../less/settings/member-section.less";
+import "@/less/settings/member-section.less";
 
 interface State {
   createUserUsername: string;
@@ -48,7 +48,7 @@ const PreferencesSection = () => {
 
   const handleCreateUserBtnClick = async () => {
     if (state.createUserUsername === "" || state.createUserPassword === "") {
-      toastHelper.error(t("message.fill-form"));
+      toast.error(t("message.fill-form"));
       return;
     }
 
@@ -61,7 +61,7 @@ const PreferencesSection = () => {
     try {
       await api.createUser(userCreate);
     } catch (error: any) {
-      toastHelper.error(error.response.data.message);
+      toast.error(error.response.data.message);
     }
     await fetchUserList();
     setState({
@@ -76,8 +76,8 @@ const PreferencesSection = () => {
 
   const handleArchiveUserClick = (user: User) => {
     showCommonDialog({
-      title: `Archive Member`,
-      content: `❗️Are you sure to archive ${user.username}?`,
+      title: t("setting.member-section.archive-member"),
+      content: t("setting.member-section.archive-warning", { username: user.username }),
       style: "warning",
       dialogName: "archive-user-dialog",
       onConfirm: async () => {
@@ -100,8 +100,8 @@ const PreferencesSection = () => {
 
   const handleDeleteUserClick = (user: User) => {
     showCommonDialog({
-      title: `Delete Member`,
-      content: `Are you sure to delete ${user.username}? THIS ACTION IS IRREVERSIABLE.❗️`,
+      title: t("setting.member-section.delete-member"),
+      content: t("setting.member-section.delete-warning", { username: user.username }),
       style: "warning",
       dialogName: "delete-user-dialog",
       onConfirm: async () => {

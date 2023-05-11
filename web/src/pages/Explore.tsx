@@ -1,38 +1,30 @@
-import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
-import { useGlobalStore, useLocationStore, useMemoStore, useUserStore } from "../store/module";
-import { DEFAULT_MEMO_LIMIT } from "../helpers/consts";
-import useLoading from "../hooks/useLoading";
-import toastHelper from "../components/Toast";
-import MemoContent from "../components/MemoContent";
-import MemoResources from "../components/MemoResources";
-import MemoFilter from "../components/MemoFilter";
-import Icon from "../components/Icon";
-import { TAG_REG } from "../labs/marked/parser";
-import "../less/explore.less";
+import { useLocation } from "react-router-dom";
+import { useFilterStore, useMemoStore } from "@/store/module";
+import { TAG_REG } from "@/labs/marked/parser";
+import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
+import useLoading from "@/hooks/useLoading";
+import MemoFilter from "@/components/MemoFilter";
+import Memo from "@/components/Memo";
+import MobileHeader from "@/components/MobileHeader";
 
 interface State {
   memos: Memo[];
 }
 
 const Explore = () => {
-  const { t, i18n } = useTranslation();
-  const navigate = useNavigate();
-  const globalStore = useGlobalStore();
-  const locationStore = useLocationStore();
-  const userStore = useUserStore();
+  const { t } = useTranslation();
+  const location = useLocation();
+  const filterStore = useFilterStore();
   const memoStore = useMemoStore();
-  const query = locationStore.state.query;
+  const filter = filterStore.state;
   const [state, setState] = useState<State>({
     memos: [],
   });
   const [isComplete, setIsComplete] = useState<boolean>(false);
   const loadingState = useLoading();
-  const customizedProfile = globalStore.state.systemStatus.customizedProfile;
-  const user = userStore.state.user;
-  const location = locationStore.state;
 
   useEffect(() => {
     memoStore.fetchAllMemos(DEFAULT_MEMO_LIMIT, 0).then((memos) => {
@@ -46,7 +38,7 @@ const Explore = () => {
     });
   }, [location]);
 
-  const { tag: tagQuery, text: textQuery } = query ?? {};
+  const { tag: tagQuery, text: textQuery } = filter;
   const showMemoFilter = Boolean(tagQuery || textQuery);
 
   const shownMemos = showMemoFilter
@@ -87,85 +79,30 @@ const Explore = () => {
       });
     } catch (error: any) {
       console.error(error);
-      toastHelper.error(error.response.data.message);
-    }
-  };
-
-  const handleMemoContentClick = async (e: React.MouseEvent) => {
-    const targetEl = e.target as HTMLElement;
-
-    if (targetEl.className === "tag-span") {
-      const tagName = targetEl.innerText.slice(1);
-      const currTagQuery = locationStore.getState().query?.tag;
-      if (currTagQuery === tagName) {
-        locationStore.setTagQuery(undefined);
-      } else {
-        locationStore.setTagQuery(tagName);
-      }
-    }
-  };
-
-  const handleTitleClick = () => {
-    if (user) {
-      navigate("/");
-    } else {
-      navigate("/auth");
+      toast.error(error.response.data.message);
     }
   };
 
   return (
-    <section className="page-wrapper explore">
-      <div className="page-container">
-        <div className="page-header">
-          <div className="title-container cursor-pointer hover:opacity-80" onClick={handleTitleClick}>
-            <img className="logo-img" src={customizedProfile.logoUrl} alt="" />
-            <span className="title-text">{customizedProfile.name}</span>
-          </div>
-          <div className="flex flex-row justify-end items-center">
-            <a
-              className="flex flex-row justify-center items-center h-12 w-12 border rounded-full hover:opacity-80 hover:shadow dark:text-white "
-              href="/explore/rss.xml"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Icon.Rss className="w-7 h-auto opacity-60" />
-            </a>
-          </div>
-        </div>
-        {!loadingState.isLoading && (
-          <main className="memos-wrapper">
-            <MemoFilter />
-            {sortedMemos.map((memo) => {
-              const createdAtStr = dayjs(memo.createdTs).locale(i18n.language).format("YYYY/MM/DD HH:mm:ss");
-              return (
-                <div className={`memo-container ${memo.pinned ? "pinned" : ""}`} key={memo.id}>
-                  {memo.pinned && <div className="corner-container"></div>}
-                  <div className="memo-header">
-                    <span className="time-text">{createdAtStr}</span>
-                    <a className="name-text" href={`/u/${memo.creatorId}`}>
-                      @{memo.creatorName}
-                    </a>
-                  </div>
-                  <MemoContent className="memo-content" content={memo.content} onMemoContentClick={handleMemoContentClick} />
-                  <MemoResources resourceList={memo.resourceList} />
-                </div>
-              );
-            })}
-            {isComplete ? (
-              state.memos.length === 0 ? (
-                <p className="w-full text-center mt-12 text-gray-600">{t("message.no-memos")}</p>
-              ) : null
-            ) : (
-              <p
-                className="m-auto text-center mt-4 italic cursor-pointer text-gray-500 hover:text-green-600"
-                onClick={handleFetchMoreClick}
-              >
-                {t("memo-list.fetch-more")}
-              </p>
-            )}
-          </main>
-        )}
-      </div>
+    <section className="w-full max-w-2xl min-h-full flex flex-col justify-start items-center px-4 sm:px-2 sm:pt-4 pb-8 bg-zinc-100 dark:bg-zinc-800">
+      <MobileHeader showSearch={false} />
+      {!loadingState.isLoading && (
+        <main className="relative w-full h-auto flex flex-col justify-start items-start -mt-2">
+          <MemoFilter />
+          {sortedMemos.map((memo) => {
+            return <Memo key={`${memo.id}-${memo.createdTs}`} memo={memo} readonly={true} />;
+          })}
+          {isComplete ? (
+            state.memos.length === 0 ? (
+              <p className="w-full text-center mt-12 text-gray-600">{t("message.no-memos")}</p>
+            ) : null
+          ) : (
+            <p className="m-auto text-center mt-4 italic cursor-pointer text-gray-500 hover:text-green-600" onClick={handleFetchMoreClick}>
+              {t("memo.fetch-more")}
+            </p>
+          )}
+        </main>
+      )}
     </section>
   );
 };

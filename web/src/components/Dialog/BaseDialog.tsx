@@ -1,12 +1,12 @@
+import { CssVarsProvider } from "@mui/joy";
 import { useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
-import { ANIMATION_DURATION } from "../../helpers/consts";
-import store from "../../store";
-import { useDialogStore } from "../../store/module";
-import { CssVarsProvider } from "@mui/joy";
-import theme from "../../theme";
-import "../../less/base-dialog.less";
+import { ANIMATION_DURATION } from "@/helpers/consts";
+import store from "@/store";
+import { useDialogStore } from "@/store/module";
+import theme from "@/theme";
+import "@/less/base-dialog.less";
 
 interface DialogConfig {
   dialogName: string;
@@ -25,6 +25,7 @@ const BaseDialog: React.FC<Props> = (props: Props) => {
   const dialogIndex = dialogStore.state.dialogStack.findIndex((item) => item === dialogName);
 
   useEffect(() => {
+    document.body.classList.add("overflow-hidden");
     dialogStore.pushDialogStack(dialogName);
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.code === "Escape") {
@@ -39,6 +40,9 @@ const BaseDialog: React.FC<Props> = (props: Props) => {
     return () => {
       document.body.removeEventListener("keydown", handleKeyDown);
       dialogStore.removeDialog(dialogName);
+      if (dialogStore.state.dialogStack.length === 0) {
+        document.body.classList.remove("overflow-hidden");
+      }
     };
   }, []);
 
@@ -66,7 +70,7 @@ const BaseDialog: React.FC<Props> = (props: Props) => {
 export function generateDialog<T extends DialogProps>(
   config: DialogConfig,
   DialogComponent: React.FC<T>,
-  props?: Omit<T, "destroy">
+  props?: Omit<T, "destroy" | "hide">
 ): DialogCallback {
   const tempDiv = document.createElement("div");
   const dialog = createRoot(tempDiv);
@@ -85,17 +89,23 @@ export function generateDialog<T extends DialogProps>(
         tempDiv.remove();
       }, ANIMATION_DURATION);
     },
+    hide: () => {
+      tempDiv.firstElementChild?.classList.remove("showup");
+      tempDiv.firstElementChild?.classList.add("showoff");
+      document.body.classList.remove("overflow-hidden");
+    },
   };
 
   const dialogProps = {
     ...props,
     destroy: cbs.destroy,
+    hide: cbs.hide,
   } as T;
 
   const Fragment = (
     <Provider store={store}>
       <CssVarsProvider theme={theme}>
-        <BaseDialog destroy={cbs.destroy} clickSpaceDestroy={true} {...config}>
+        <BaseDialog destroy={cbs.destroy} hide={cbs.hide} clickSpaceDestroy={true} {...config}>
           <DialogComponent {...dialogProps} />
         </BaseDialog>
       </CssVarsProvider>

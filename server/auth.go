@@ -11,14 +11,13 @@ import (
 	"github.com/usememos/memos/common"
 	"github.com/usememos/memos/plugin/idp"
 	"github.com/usememos/memos/plugin/idp/oauth2"
-	metric "github.com/usememos/memos/plugin/metrics"
 	"github.com/usememos/memos/store"
 
 	"github.com/labstack/echo/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (s *Server) registerAuthRoutes(g *echo.Group) {
+func (s *Server) registerAuthRoutes(g *echo.Group, secret string) {
 	g.POST("/auth/signin", func(c echo.Context) error {
 		ctx := c.Request().Context()
 		signin := &api.SignIn{}
@@ -31,10 +30,10 @@ func (s *Server) registerAuthRoutes(g *echo.Group) {
 		}
 		user, err := s.Store.FindUser(ctx, userFind)
 		if err != nil && common.ErrorCode(err) != common.NotFound {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to find user by username %s", signin.Username)).SetInternal(err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Incorrect login credentials, please try again")
 		}
 		if user == nil {
-			return echo.NewHTTPError(http.StatusUnauthorized, fmt.Sprintf("User not found with username %s", signin.Username))
+			return echo.NewHTTPError(http.StatusUnauthorized, "Incorrect login credentials, please try again")
 		} else if user.RowStatus == api.Archived {
 			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("User has been archived with username %s", signin.Username))
 		}
@@ -42,11 +41,11 @@ func (s *Server) registerAuthRoutes(g *echo.Group) {
 		// Compare the stored hashed password, with the hashed version of the password that was received.
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(signin.Password)); err != nil {
 			// If the two passwords don't match, return a 401 status.
-			return echo.NewHTTPError(http.StatusUnauthorized, "Incorrect password").SetInternal(err)
+			return echo.NewHTTPError(http.StatusUnauthorized, "Incorrect login credentials, please try again")
 		}
 
-		if err = setUserSession(c, user); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set signin session").SetInternal(err)
+		if err := GenerateTokensAndSetCookies(c, user, secret); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate tokens").SetInternal(err)
 		}
 		if err := s.createUserAuthSignInActivity(c, user); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
@@ -99,9 +98,27 @@ func (s *Server) registerAuthRoutes(g *echo.Group) {
 			Username: &userInfo.Identifier,
 		})
 		if err != nil && common.ErrorCode(err) != common.NotFound {
-			return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to find user by username %s", userInfo.Identifier)).SetInternal(err)
+			return echo.NewHTTPError(http.StatusInternalServerError, "Incorrect login credentials, please try again")
 		}
 		if user == nil {
+			allowSignUpSetting, err := s.Store.FindSystemSetting(ctx, &api.SystemSettingFind{
+				Name: api.SystemSettingAllowSignUpName,
+			})
+			if err != nil && common.ErrorCode(err) != common.NotFound {
+				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find system setting").SetInternal(err)
+			}
+
+			allowSignUpSettingValue := false
+			if allowSignUpSetting != nil {
+				err = json.Unmarshal([]byte(allowSignUpSetting.Value), &allowSignUpSettingValue)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusInternalServerError, "Failed to unmarshal system setting allow signup").SetInternal(err)
+				}
+			}
+			if !allowSignUpSettingValue {
+				return echo.NewHTTPError(http.StatusUnauthorized, "signup is disabled").SetInternal(err)
+			}
+
 			userCreate := &api.UserCreate{
 				Username: userInfo.Identifier,
 				// The new signup user should be normal user by default.
@@ -129,8 +146,8 @@ func (s *Server) registerAuthRoutes(g *echo.Group) {
 			return echo.NewHTTPError(http.StatusForbidden, fmt.Sprintf("User has been archived with username %s", userInfo.Identifier))
 		}
 
-		if err = setUserSession(c, user); err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set signin session").SetInternal(err)
+		if err := GenerateTokensAndSetCookies(c, user, secret); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate tokens").SetInternal(err)
 		}
 		if err := s.createUserAuthSignInActivity(c, user); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
@@ -197,23 +214,18 @@ func (s *Server) registerAuthRoutes(g *echo.Group) {
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create user").SetInternal(err)
 		}
+		if err := GenerateTokensAndSetCookies(c, user, secret); err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate tokens").SetInternal(err)
+		}
 		if err := s.createUserAuthSignUpActivity(c, user); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
 		}
 
-		err = setUserSession(c, user)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set signup session").SetInternal(err)
-		}
 		return c.JSON(http.StatusOK, composeResponse(user))
 	})
 
 	g.POST("/auth/signout", func(c echo.Context) error {
-		err := removeUserSession(c)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to set sign out session").SetInternal(err)
-		}
-
+		RemoveTokensAndCookies(c)
 		return c.JSON(http.StatusOK, true)
 	})
 }
@@ -237,9 +249,6 @@ func (s *Server) createUserAuthSignInActivity(c echo.Context, user *api.User) er
 	if err != nil || activity == nil {
 		return errors.Wrap(err, "failed to create activity")
 	}
-	s.Collector.Collect(ctx, &metric.Metric{
-		Name: string(activity.Type),
-	})
 	return err
 }
 
@@ -262,8 +271,5 @@ func (s *Server) createUserAuthSignUpActivity(c echo.Context, user *api.User) er
 	if err != nil || activity == nil {
 		return errors.Wrap(err, "failed to create activity")
 	}
-	s.Collector.Collect(ctx, &metric.Metric{
-		Name: string(activity.Type),
-	})
 	return err
 }

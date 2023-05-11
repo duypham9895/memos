@@ -1,14 +1,14 @@
 import { Button, Checkbox } from "@mui/joy";
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import useLoading from "../hooks/useLoading";
-import { useEditorStore, useResourceStore } from "../store/module";
-import { getResourceUrl } from "../utils/resource";
+import useLoading from "@/hooks/useLoading";
+import { useEditorStore, useResourceStore } from "@/store/module";
+import { getResourceUrl } from "@/utils/resource";
 import Icon from "./Icon";
-import toastHelper from "./Toast";
 import { generateDialog } from "./Dialog";
 import showPreviewImageDialog from "./PreviewImageDialog";
-import "../less/resources-selector-dialog.less";
+import "@/less/resources-selector-dialog.less";
 
 type Props = DialogProps;
 
@@ -32,7 +32,7 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
       .fetchResourceList()
       .catch((error) => {
         console.error(error);
-        toastHelper.error(error.response.data.message);
+        toast.error(error.response.data.message);
       })
       .finally(() => {
         loadingState.setFinish();
@@ -79,7 +79,7 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
   return (
     <>
       <div className="dialog-header-container">
-        <p className="title-text">{t("sidebar.resources")}</p>
+        <p className="title-text">{t("common.resources")}</p>
         <button className="btn close-btn" onClick={destroy}>
           <Icon.X className="icon-img" />
         </button>
@@ -87,17 +87,17 @@ const ResourcesSelectorDialog: React.FC<Props> = (props: Props) => {
       <div className="dialog-content-container">
         {loadingState.isLoading ? (
           <div className="loading-text-container">
-            <p className="tip-text">{t("resources.fetching-data")}</p>
+            <p className="tip-text">{t("resource.fetching-data")}</p>
           </div>
         ) : (
           <div className="resource-table-container">
             <div className="fields-container">
-              <span className="field-text name-text">{t("resources.name")}</span>
+              <span className="field-text name-text">{t("common.name")}</span>
               <span className="field-text type-text">Type</span>
               <span></span>
             </div>
             {resources.length === 0 ? (
-              <p className="tip-text">{t("resources.no-resources")}</p>
+              <p className="tip-text">{t("resource.no-resources")}</p>
             ) : (
               resources.map((resource, index) => (
                 <div key={resource.id} className="resource-container">

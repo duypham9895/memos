@@ -9,13 +9,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/usememos/memos/api"
-	metric "github.com/usememos/memos/plugin/metrics"
 	"github.com/usememos/memos/server/profile"
 	"github.com/usememos/memos/store"
 	"github.com/usememos/memos/store/db"
 
-	"github.com/gorilla/sessions"
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -24,10 +21,9 @@ type Server struct {
 	e  *echo.Echo
 	db *sql.DB
 
-	ID        string
-	Profile   *profile.Profile
-	Store     *store.Store
-	Collector *MetricCollector
+	ID      string
+	Profile *profile.Profile
+	Store   *store.Store
 }
 
 func NewServer(ctx context.Context, profile *profile.Profile) (*Server, error) {
@@ -57,11 +53,6 @@ func NewServer(ctx context.Context, profile *profile.Profile) (*Server, error) {
 
 	e.Use(middleware.Gzip())
 
-	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
-		Skipper:     s.defaultAuthSkipper,
-		TokenLookup: "cookie:_csrf",
-	}))
-
 	e.Use(middleware.CORS())
 
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
@@ -83,40 +74,42 @@ func NewServer(ctx context.Context, profile *profile.Profile) (*Server, error) {
 	}
 	s.ID = serverID
 
-	secretSessionName := "usememos"
+	embedFrontend(e)
+
+	secret := "usememos"
 	if profile.Mode == "prod" {
-		secretSessionName, err = s.getSystemSecretSessionName(ctx)
+		secret, err = s.getSystemSecretSessionName(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
-	e.Use(session.Middleware(sessions.NewCookieStore([]byte(secretSessionName))))
-
-	embedFrontend(e)
-
-	// Register MetricCollector to server.
-	s.registerMetricCollector()
 
 	rootGroup := e.Group("")
 	s.registerRSSRoutes(rootGroup)
 
 	publicGroup := e.Group("/o")
-	s.registerResourcePublicRoutes(publicGroup)
+	publicGroup.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return JWTMiddleware(s, next, secret)
+	})
 	registerGetterPublicRoutes(publicGroup)
+	s.registerResourcePublicRoutes(publicGroup)
 
 	apiGroup := e.Group("/api")
 	apiGroup.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return aclMiddleware(s, next)
+		return JWTMiddleware(s, next, secret)
 	})
 	s.registerSystemRoutes(apiGroup)
-	s.registerAuthRoutes(apiGroup)
+	s.registerAuthRoutes(apiGroup, secret)
 	s.registerUserRoutes(apiGroup)
 	s.registerMemoRoutes(apiGroup)
+	s.registerMemoResourceRoutes(apiGroup)
 	s.registerShortcutRoutes(apiGroup)
 	s.registerResourceRoutes(apiGroup)
 	s.registerTagRoutes(apiGroup)
 	s.registerStorageRoutes(apiGroup)
 	s.registerIdentityProviderRoutes(apiGroup)
+	s.registerOpenAIRoutes(apiGroup)
+	s.registerMemoRelationRoutes(apiGroup)
 
 	return s, nil
 }
@@ -125,7 +118,6 @@ func (s *Server) Start(ctx context.Context) error {
 	if err := s.createServerStartActivity(ctx); err != nil {
 		return errors.Wrap(err, "failed to create activity")
 	}
-	s.Collector.Identify(ctx)
 	return s.e.Start(fmt.Sprintf(":%d", s.Profile.Port))
 }
 
@@ -146,6 +138,10 @@ func (s *Server) Shutdown(ctx context.Context) {
 	fmt.Printf("memos stopped properly\n")
 }
 
+func (s *Server) GetEcho() *echo.Echo {
+	return s.e
+}
+
 func (s *Server) createServerStartActivity(ctx context.Context) error {
 	payload := api.ActivityServerStartPayload{
 		ServerID: s.ID,
@@ -164,8 +160,5 @@ func (s *Server) createServerStartActivity(ctx context.Context) error {
 	if err != nil || activity == nil {
 		return errors.Wrap(err, "failed to create activity")
 	}
-	s.Collector.Collect(ctx, &metric.Metric{
-		Name: string(activity.Type),
-	})
 	return err
 }

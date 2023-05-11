@@ -1,5 +1,7 @@
-import * as api from "../../helpers/api";
-import * as storage from "../../helpers/storage";
+import * as api from "@/helpers/api";
+import storage from "@/helpers/storage";
+import i18n from "@/i18n";
+import { findNearestLanguageMatch } from "@/utils/i18n";
 import store, { useAppSelector } from "../";
 import { setAppearance, setGlobalState, setLocale } from "../reducer/global";
 
@@ -9,12 +11,13 @@ export const initialGlobalState = async () => {
     appearance: "system" as Appearance,
     systemStatus: {
       allowSignUp: false,
+      ignoreUpgrade: false,
       disablePublicMemos: false,
       additionalStyle: "",
       additionalScript: "",
       customizedProfile: {
         name: "memos",
-        logoUrl: "/logo.png",
+        logoUrl: "/logo.webp",
         description: "",
         locale: "en",
         appearance: "system",
@@ -31,28 +34,23 @@ export const initialGlobalState = async () => {
     defaultGlobalState.appearance = storageAppearance;
   }
 
-  try {
-    const { data } = (await api.getSystemStatus()).data;
-    if (data) {
-      const customizedProfile = data.customizedProfile;
-      defaultGlobalState.systemStatus = {
-        ...data,
-        customizedProfile: {
-          name: customizedProfile.name || "memos",
-          logoUrl: customizedProfile.logoUrl || "/logo.png",
-          description: customizedProfile.description,
-          locale: customizedProfile.locale || "en",
-          appearance: customizedProfile.appearance || "system",
-          externalUrl: "",
-        },
-      };
-      defaultGlobalState.locale = customizedProfile.locale;
-      defaultGlobalState.appearance = customizedProfile.appearance;
-    }
-  } catch (error) {
-    // do nth
+  const { data } = (await api.getSystemStatus()).data;
+  if (data) {
+    const customizedProfile = data.customizedProfile;
+    defaultGlobalState.systemStatus = {
+      ...data,
+      customizedProfile: {
+        name: customizedProfile.name || "memos",
+        logoUrl: customizedProfile.logoUrl || "/logo.webp",
+        description: customizedProfile.description,
+        locale: customizedProfile.locale || "en",
+        appearance: customizedProfile.appearance || "system",
+        externalUrl: "",
+      },
+    };
+    defaultGlobalState.locale = storageLocale || findNearestLanguageMatch(i18n.language);
+    defaultGlobalState.appearance = customizedProfile.appearance;
   }
-
   store.dispatch(setGlobalState(defaultGlobalState));
 };
 
@@ -71,6 +69,16 @@ export const useGlobalStore = () => {
       const { data: systemStatus } = (await api.getSystemStatus()).data;
       store.dispatch(setGlobalState({ systemStatus: systemStatus }));
       return systemStatus;
+    },
+    setSystemStatus: (systemStatus: Partial<SystemStatus>) => {
+      store.dispatch(
+        setGlobalState({
+          systemStatus: {
+            ...state.systemStatus,
+            ...systemStatus,
+          },
+        })
+      );
     },
     setLocale: (locale: Locale) => {
       store.dispatch(setLocale(locale));

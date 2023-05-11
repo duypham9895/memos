@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import * as api from "../../helpers/api";
+import * as api from "@/helpers/api";
 import showCreateIdentityProviderDialog from "../CreateIdentityProviderDialog";
-import Dropdown from "../common/Dropdown";
+import Dropdown from "../kit/Dropdown";
 import { showCommonDialog } from "../Dialog/CommonDialog";
-import toastHelper from "../Toast";
 
 const SSOSection = () => {
   const { t } = useTranslation();
@@ -23,8 +23,8 @@ const SSOSection = () => {
 
   const handleDeleteIdentityProvider = async (identityProvider: IdentityProvider) => {
     showCommonDialog({
-      title: "Confirm delete",
-      content: "Are you sure to delete this SSO? THIS ACTION IS IRREVERSIABLE❗",
+      title: t("setting.sso-section.delete-sso"),
+      content: t("setting.sso-section.confirm-delete", { name: identityProvider.name }),
       style: "warning",
       dialogName: "delete-identity-provider-dialog",
       onConfirm: async () => {
@@ -32,7 +32,7 @@ const SSOSection = () => {
           await api.deleteIdentityProvider(identityProvider.id);
         } catch (error: any) {
           console.error(error);
-          toastHelper.error(error.response.data.message);
+          toast.error(error.response.data.message);
         }
         await fetchIdentityProviderList();
       },
@@ -42,7 +42,7 @@ const SSOSection = () => {
   return (
     <div className="section-container">
       <div className="mt-4 mb-2 w-full flex flex-row justify-start items-center">
-        <span className="font-mono text-sm text-gray-400 mr-2">SSO List</span>
+        <span className="font-mono text-sm text-gray-400 mr-2">{t("setting.sso-section.sso-list")}</span>
         <button
           className="btn-normal px-2 py-0 leading-7"
           onClick={() => showCreateIdentityProviderDialog(undefined, fetchIdentityProviderList)}
@@ -68,7 +68,7 @@ const SSOSection = () => {
                       className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded hover:bg-gray-100 dark:hover:bg-zinc-600"
                       onClick={() => showCreateIdentityProviderDialog(identityProvider, fetchIdentityProviderList)}
                     >
-                      Edit
+                      {t("common.edit")}
                     </button>
                     <button
                       className="w-full text-left text-sm leading-6 py-1 px-3 cursor-pointer rounded text-red-600 hover:bg-gray-100 dark:hover:bg-zinc-600"

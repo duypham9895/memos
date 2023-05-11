@@ -1,24 +1,24 @@
-import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
-import { UNKNOWN_ID } from "../helpers/consts";
-import { useGlobalStore, useLocationStore, useMemoStore, useUserStore } from "../store/module";
-import useLoading from "../hooks/useLoading";
-import toastHelper from "../components/Toast";
-import MemoContent from "../components/MemoContent";
-import MemoResources from "../components/MemoResources";
-import "../less/memo-detail.less";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { UNKNOWN_ID } from "@/helpers/consts";
+import { useGlobalStore, useMemoStore, useUserStore } from "@/store/module";
+import useLoading from "@/hooks/useLoading";
+import MemoContent from "@/components/MemoContent";
+import MemoResources from "@/components/MemoResources";
+import { getDateTimeString } from "@/helpers/datetime";
+import "@/less/memo-detail.less";
 
 interface State {
   memo: Memo;
 }
 
 const MemoDetail = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const params = useParams();
+  const location = useLocation();
   const globalStore = useGlobalStore();
-  const locationStore = useLocationStore();
   const memoStore = useMemoStore();
   const userStore = useUserStore();
   const [state, setState] = useState<State>({
@@ -29,7 +29,6 @@ const MemoDetail = () => {
   const loadingState = useLoading();
   const customizedProfile = globalStore.state.systemStatus.customizedProfile;
   const user = userStore.state.user;
-  const location = locationStore.state;
 
   useEffect(() => {
     const memoId = Number(params.memoId);
@@ -44,7 +43,7 @@ const MemoDetail = () => {
         })
         .catch((error) => {
           console.error(error);
-          toastHelper.error(error.response.data.message);
+          toast.error(error.response.data.message);
         });
     }
   }, [location]);
@@ -54,7 +53,7 @@ const MemoDetail = () => {
       <div className="page-container">
         <div className="page-header">
           <div className="title-container">
-            <img className="logo-img" src={customizedProfile.logoUrl} alt="" />
+            <img className="h-10 w-auto rounded-lg mr-2" src={customizedProfile.logoUrl} alt="" />
             <p className="logo-text">{customizedProfile.name}</p>
           </div>
           <div className="action-button-container">
@@ -62,7 +61,7 @@ const MemoDetail = () => {
               <>
                 {user ? (
                   <Link to="/" className="btn">
-                    <span className="icon">🏠</span> {t("common.back-to-home")}
+                    <span className="icon">🏠</span> {t("router.back-to-home")}
                   </Link>
                 ) : (
                   <Link to="/auth" className="btn">
@@ -78,13 +77,13 @@ const MemoDetail = () => {
             <div className="memo-container">
               <div className="memo-header">
                 <div className="status-container">
-                  <span className="time-text">{dayjs(state.memo.createdTs).locale(i18n.language).format("YYYY/MM/DD HH:mm:ss")}</span>
+                  <span className="time-text">{getDateTimeString(state.memo.createdTs)}</span>
                   <a className="name-text" href={`/u/${state.memo.creatorId}`}>
                     @{state.memo.creatorName}
                   </a>
                 </div>
               </div>
-              <MemoContent className="memo-content" content={state.memo.content} onMemoContentClick={() => undefined} />
+              <MemoContent className="memo-content" content={state.memo.content} showFull={true} onMemoContentClick={() => undefined} />
               <MemoResources resourceList={state.memo.resourceList} />
             </div>
           </main>

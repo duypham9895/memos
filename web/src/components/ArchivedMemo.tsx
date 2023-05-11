@@ -1,11 +1,11 @@
+import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { useMemoStore } from "../store/module";
-import * as utils from "../helpers/utils";
-import useToggle from "../hooks/useToggle";
-import toastHelper from "./Toast";
+import { useMemoStore } from "@/store/module";
+import { getDateTimeString } from "@/helpers/datetime";
+import useToggle from "@/hooks/useToggle";
 import MemoContent from "./MemoContent";
 import MemoResources from "./MemoResources";
-import "../less/memo.less";
+import "@/less/memo.less";
 
 interface Props {
   memo: Memo;
@@ -23,7 +23,7 @@ const ArchivedMemo: React.FC<Props> = (props: Props) => {
         await memoStore.deleteMemoById(memo.id);
       } catch (error: any) {
         console.error(error);
-        toastHelper.error(error.response.data.message);
+        toast.error(error.response.data.message);
       }
     } else {
       toggleConfirmDeleteBtn();
@@ -37,10 +37,10 @@ const ArchivedMemo: React.FC<Props> = (props: Props) => {
         rowStatus: "NORMAL",
       });
       await memoStore.fetchMemos();
-      toastHelper.info(t("message.restored-successfully"));
+      toast(t("message.restored-successfully"));
     } catch (error: any) {
       console.error(error);
-      toastHelper.error(error.response.data.message);
+      toast.error(error.response.data.message);
     }
   };
 
@@ -54,7 +54,7 @@ const ArchivedMemo: React.FC<Props> = (props: Props) => {
     <div className={`memo-wrapper archived ${"memos-" + memo.id}`} onMouseLeave={handleMouseLeaveMemoWrapper}>
       <div className="memo-top-wrapper">
         <span className="time-text">
-          {t("common.archived-at")} {utils.getDateTimeString(memo.updatedTs)}
+          {t("memo.archived-at")} {getDateTimeString(memo.updatedTs)}
         </span>
         <div className="btns-container">
           <span className="btn-text" onClick={handleRestoreMemoClick}>

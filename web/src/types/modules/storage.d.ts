@@ -7,8 +7,10 @@ interface StorageS3Config {
   region: string;
   accessKey: string;
   secretKey: string;
+  path: string;
   bucket: string;
   urlPrefix: string;
+  urlSuffix: string;
 }
 
 interface StorageConfig {

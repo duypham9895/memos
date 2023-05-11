@@ -1,5 +1,12 @@
 package api
 
+const (
+	// LocalStorage means the storage service is local file system.
+	LocalStorage = -1
+	// DatabaseStorage means the storage service is database.
+	DatabaseStorage = 0
+)
+
 type StorageType string
 
 const (
@@ -12,11 +19,13 @@ type StorageConfig struct {
 
 type StorageS3Config struct {
 	EndPoint  string `json:"endPoint"`
+	Path      string `json:"path"`
 	Region    string `json:"region"`
 	AccessKey string `json:"accessKey"`
 	SecretKey string `json:"secretKey"`
 	Bucket    string `json:"bucket"`
 	URLPrefix string `json:"urlPrefix"`
+	URLSuffix string `json:"urlSuffix"`
 }
 
 type Storage struct {

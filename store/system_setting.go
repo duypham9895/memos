@@ -41,7 +41,7 @@ func (s *Store) UpsertSystemSetting(ctx context.Context, upsert *api.SystemSetti
 	}
 
 	systemSetting := systemSettingRaw.toSystemSetting()
-
+	s.systemSettingCache.Store(systemSettingRaw.Name, systemSettingRaw)
 	return systemSetting, nil
 }
 
@@ -63,13 +63,17 @@ func (s *Store) FindSystemSettingList(ctx context.Context, find *api.SystemSetti
 
 	list := []*api.SystemSetting{}
 	for _, raw := range systemSettingRawList {
+		s.systemSettingCache.Store(raw.Name, raw)
 		list = append(list, raw.toSystemSetting())
 	}
-
 	return list, nil
 }
 
 func (s *Store) FindSystemSetting(ctx context.Context, find *api.SystemSettingFind) (*api.SystemSetting, error) {
+	if systemSetting, ok := s.systemSettingCache.Load(find.Name); ok {
+		systemSettingRaw := systemSetting.(*systemSettingRaw)
+		return systemSettingRaw.toSystemSetting(), nil
+	}
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, FormatError(err)
@@ -85,7 +89,9 @@ func (s *Store) FindSystemSetting(ctx context.Context, find *api.SystemSettingFi
 		return nil, &common.Error{Code: common.NotFound, Err: fmt.Errorf("not found")}
 	}
 
-	return systemSettingRawList[0].toSystemSetting(), nil
+	systemSettingRaw := systemSettingRawList[0]
+	s.systemSettingCache.Store(systemSettingRaw.Name, systemSettingRaw)
+	return systemSettingRaw.toSystemSetting(), nil
 }
 
 func upsertSystemSetting(ctx context.Context, tx *sql.Tx, upsert *api.SystemSettingUpsert) (*systemSettingRaw, error) {
@@ -113,7 +119,7 @@ func upsertSystemSetting(ctx context.Context, tx *sql.Tx, upsert *api.SystemSett
 }
 
 func findSystemSettingList(ctx context.Context, tx *sql.Tx, find *api.SystemSettingFind) ([]*systemSettingRaw, error) {
-	where, args := []string{"1 = 1"}, []interface{}{}
+	where, args := []string{"1 = 1"}, []any{}
 	if find.Name.String() != "" {
 		where, args = append(where, "name = ?"), append(args, find.Name.String())
 	}
