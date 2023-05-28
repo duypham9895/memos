@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,20 +14,29 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/disintegration/imaging"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"github.com/usememos/memos/api"
 	"github.com/usememos/memos/common"
 	"github.com/usememos/memos/common/log"
 	"github.com/usememos/memos/plugin/storage/s3"
+	"github.com/usememos/memos/store"
 	"go.uber.org/zap"
 )
 
 const (
-	// The max file size is 32MB.
-	maxFileSize = 32 << 20
+	// The upload memory buffer is 32 MiB.
+	// It should be kept low, so RAM usage doesn't get out of control.
+	// This is unrelated to maximum upload size limit, which is now set through system setting.
+	maxUploadBufferSizeBytes = 32 << 20
+	MebiByte                 = 1024 * 1024
+
+	// thumbnailImagePath is the directory to store image thumbnails.
+	thumbnailImagePath = ".thumbnail_cache"
 )
 
 var fileKeyPattern = regexp.MustCompile(`\{[a-z]{1,9}\}`)
@@ -54,7 +64,7 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create resource").SetInternal(err)
 		}
-		if err := s.createResourceCreateActivity(c, resource); err != nil {
+		if err := createResourceCreateActivity(c.Request().Context(), s.Store, resource); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
 		}
 		return c.JSON(http.StatusOK, composeResponse(resource))
@@ -67,8 +77,14 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 			return echo.NewHTTPError(http.StatusUnauthorized, "Missing user in session")
 		}
 
-		if err := c.Request().ParseMultipartForm(maxFileSize); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, "Upload file overload max size").SetInternal(err)
+		// This is the backend default max upload size limit.
+		maxUploadSetting := s.Store.GetSystemSettingValueOrDefault(&ctx, api.SystemSettingMaxUploadSizeMiBName, "32")
+		var settingMaxUploadSizeBytes int
+		if settingMaxUploadSizeMiB, err := strconv.Atoi(maxUploadSetting); err == nil {
+			settingMaxUploadSizeBytes = settingMaxUploadSizeMiB * MebiByte
+		} else {
+			log.Warn("Failed to parse max upload size", zap.Error(err))
+			settingMaxUploadSizeBytes = 0
 		}
 
 		file, err := c.FormFile("file")
@@ -77,6 +93,14 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 		}
 		if file == nil {
 			return echo.NewHTTPError(http.StatusBadRequest, "Upload file not found").SetInternal(err)
+		}
+
+		if file.Size > int64(settingMaxUploadSizeBytes) {
+			message := fmt.Sprintf("File size exceeds allowed limit of %d MiB", settingMaxUploadSizeBytes/MebiByte)
+			return echo.NewHTTPError(http.StatusBadRequest, message).SetInternal(err)
+		}
+		if err := c.Request().ParseMultipartForm(maxUploadBufferSizeBytes); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, "Failed to parse upload data").SetInternal(err)
 		}
 
 		filetype := file.Header.Get("Content-Type")
@@ -99,6 +123,8 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to unmarshal storage service id").SetInternal(err)
 			}
 		}
+
+		publicID := common.GenUUID()
 		if storageServiceID == api.DatabaseStorage {
 			fileBytes, err := io.ReadAll(sourceFile)
 			if err != nil {
@@ -119,19 +145,20 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 			if err != nil && common.ErrorCode(err) != common.NotFound {
 				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to find local storage path setting").SetInternal(err)
 			}
-			localStoragePath := ""
-			if systemSettingLocalStoragePath != nil {
+			localStoragePath := "assets/{publicid}"
+			if systemSettingLocalStoragePath != nil && systemSettingLocalStoragePath.Value != "" {
 				err = json.Unmarshal([]byte(systemSettingLocalStoragePath.Value), &localStoragePath)
 				if err != nil {
 					return echo.NewHTTPError(http.StatusInternalServerError, "Failed to unmarshal local storage path setting").SetInternal(err)
 				}
 			}
 			filePath := filepath.FromSlash(localStoragePath)
-			if !strings.Contains(filePath, "{filename}") {
-				filePath = filepath.Join(filePath, "{filename}")
+			if !strings.Contains(filePath, "{publicid}") {
+				filePath = filepath.Join(filePath, "{publicid}")
 			}
-			filePath = filepath.Join(s.Profile.Data, replacePathTemplate(filePath, file.Filename))
-			dir, filename := filepath.Split(filePath)
+			filePath = filepath.Join(s.Profile.Data, replacePathTemplate(filePath, file.Filename, publicID+filepath.Ext(file.Filename)))
+
+			dir := filepath.Dir(filePath)
 			if err = os.MkdirAll(dir, os.ModePerm); err != nil {
 				return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create directory").SetInternal(err)
 			}
@@ -147,7 +174,7 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 
 			resourceCreate = &api.ResourceCreate{
 				CreatorID:    userID,
-				Filename:     filename,
+				Filename:     file.Filename,
 				Type:         filetype,
 				Size:         size,
 				InternalPath: filePath,
@@ -174,10 +201,10 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 				}
 
 				filePath := s3Config.Path
-				if !strings.Contains(filePath, "{filename}") {
-					filePath = path.Join(filePath, "{filename}")
+				if !strings.Contains(filePath, "{publicid}") {
+					filePath = path.Join(filePath, "{publicid}")
 				}
-				filePath = replacePathTemplate(filePath, file.Filename)
+				filePath = replacePathTemplate(filePath, file.Filename, publicID+filepath.Ext(file.Filename))
 				_, filename := filepath.Split(filePath)
 				link, err := s3Client.UploadFile(ctx, filePath, filetype, sourceFile)
 				if err != nil {
@@ -195,13 +222,12 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 			}
 		}
 
-		publicID := common.GenUUID()
 		resourceCreate.PublicID = publicID
 		resource, err := s.Store.CreateResource(ctx, resourceCreate)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create resource").SetInternal(err)
 		}
-		if err := s.createResourceCreateActivity(c, resource); err != nil {
+		if err := createResourceCreateActivity(c.Request().Context(), s.Store, resource); err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create activity").SetInternal(err)
 		}
 		return c.JSON(http.StatusOK, composeResponse(resource))
@@ -298,10 +324,15 @@ func (s *Server) registerResourceRoutes(g *echo.Group) {
 		}
 
 		if resource.InternalPath != "" {
-			err := os.Remove(resource.InternalPath)
-			if err != nil {
+			if err := os.Remove(resource.InternalPath); err != nil {
 				log.Warn(fmt.Sprintf("failed to delete local file with path %s", resource.InternalPath), zap.Error(err))
 			}
+		}
+
+		ext := filepath.Ext(resource.Filename)
+		thumbnailPath := path.Join(s.Profile.Data, thumbnailImagePath, fmt.Sprintf("%d-%s%s", resource.ID, resource.PublicID, ext))
+		if err := os.Remove(thumbnailPath); err != nil {
+			log.Warn(fmt.Sprintf("failed to delete local thumbnail with path %s", thumbnailPath), zap.Error(err))
 		}
 
 		resourceDelete := &api.ResourceDelete{
@@ -391,14 +422,26 @@ func (s *Server) registerResourcePublicRoutes(g *echo.Group) {
 
 		blob := resource.Blob
 		if resource.InternalPath != "" {
-			src, err := os.Open(resource.InternalPath)
+			resourcePath := resource.InternalPath
+			src, err := os.Open(resourcePath)
 			if err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to open the local resource: %s", resource.InternalPath)).SetInternal(err)
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to open the local resource: %s", resourcePath)).SetInternal(err)
 			}
 			defer src.Close()
 			blob, err = io.ReadAll(src)
 			if err != nil {
-				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read the local resource: %s", resource.InternalPath)).SetInternal(err)
+				return echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("Failed to read the local resource: %s", resourcePath)).SetInternal(err)
+			}
+		}
+
+		if c.QueryParam("thumbnail") == "1" && common.HasPrefixes(resource.Type, "image/png", "image/jpeg") {
+			ext := filepath.Ext(filename)
+			thumbnailPath := path.Join(s.Profile.Data, thumbnailImagePath, fmt.Sprintf("%d-%s%s", resource.ID, resource.PublicID, ext))
+			thumbnailBlob, err := getOrGenerateThumbnailImage(blob, thumbnailPath)
+			if err != nil {
+				log.Warn(fmt.Sprintf("failed to get or generate local thumbnail with path %s", thumbnailPath), zap.Error(err))
+			} else {
+				blob = thumbnailBlob
 			}
 		}
 
@@ -415,8 +458,7 @@ func (s *Server) registerResourcePublicRoutes(g *echo.Group) {
 	})
 }
 
-func (s *Server) createResourceCreateActivity(c echo.Context, resource *api.Resource) error {
-	ctx := c.Request().Context()
+func createResourceCreateActivity(ctx context.Context, store *store.Store, resource *api.Resource) error {
 	payload := api.ActivityResourceCreatePayload{
 		Filename: resource.Filename,
 		Type:     resource.Type,
@@ -426,7 +468,7 @@ func (s *Server) createResourceCreateActivity(c echo.Context, resource *api.Reso
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal activity payload")
 	}
-	activity, err := s.Store.CreateActivity(ctx, &api.ActivityCreate{
+	activity, err := store.CreateActivity(ctx, &api.ActivityCreate{
 		CreatorID: resource.CreatorID,
 		Type:      api.ActivityResourceCreate,
 		Level:     api.ActivityInfo,
@@ -438,10 +480,12 @@ func (s *Server) createResourceCreateActivity(c echo.Context, resource *api.Reso
 	return err
 }
 
-func replacePathTemplate(path string, filename string) string {
+func replacePathTemplate(path, filename, publicID string) string {
 	t := time.Now()
 	path = fileKeyPattern.ReplaceAllStringFunc(path, func(s string) string {
 		switch s {
+		case "{publicid}":
+			return publicID
 		case "{filename}":
 			return filename
 		case "{timestamp}":
@@ -462,4 +506,49 @@ func replacePathTemplate(path string, filename string) string {
 		return s
 	})
 	return path
+}
+
+var availableGeneratorAmount int32 = 32
+
+func getOrGenerateThumbnailImage(srcBlob []byte, dstPath string) ([]byte, error) {
+	if _, err := os.Stat(dstPath); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return nil, errors.Wrap(err, "failed to check thumbnail image stat")
+		}
+
+		if atomic.LoadInt32(&availableGeneratorAmount) <= 0 {
+			return nil, errors.New("not enough available generator amount")
+		}
+		atomic.AddInt32(&availableGeneratorAmount, -1)
+		defer func() {
+			atomic.AddInt32(&availableGeneratorAmount, 1)
+		}()
+
+		reader := bytes.NewReader(srcBlob)
+		src, err := imaging.Decode(reader)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to decode thumbnail image")
+		}
+		thumbnailImage := imaging.Resize(src, 512, 0, imaging.Lanczos)
+
+		dstDir := path.Dir(dstPath)
+		if err := os.MkdirAll(dstDir, os.ModePerm); err != nil {
+			return nil, errors.Wrap(err, "failed to create thumbnail dir")
+		}
+
+		if err := imaging.Save(thumbnailImage, dstPath); err != nil {
+			return nil, errors.Wrap(err, "failed to resize thumbnail image")
+		}
+	}
+
+	dstFile, err := os.Open(dstPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to open the local resource")
+	}
+	defer dstFile.Close()
+	dstBlob, err := io.ReadAll(dstFile)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read the local resource")
+	}
+	return dstBlob, nil
 }

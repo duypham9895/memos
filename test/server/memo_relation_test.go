@@ -27,15 +27,15 @@ func TestMemoRelationServer(t *testing.T) {
 	require.Equal(t, signup.Username, user.Username)
 	memoList, err := s.getMemoList()
 	require.NoError(t, err)
-	require.Len(t, memoList, 0)
-	memo, err := s.postMemoCreate(&api.MemoCreate{
+	require.Len(t, memoList, 1)
+	memo, err := s.postMemoCreate(&api.CreateMemoRequest{
 		Content: "test memo",
 	})
 	require.NoError(t, err)
 	require.Equal(t, "test memo", memo.Content)
-	memo2, err := s.postMemoCreate(&api.MemoCreate{
+	memo2, err := s.postMemoCreate(&api.CreateMemoRequest{
 		Content: "test memo2",
-		MemoRelationList: []*api.MemoRelationUpsert{
+		RelationList: []*api.MemoRelationUpsert{
 			{
 				RelatedMemoID: memo.ID,
 				Type:          api.MemoRelationReference,
@@ -46,7 +46,7 @@ func TestMemoRelationServer(t *testing.T) {
 	require.Equal(t, "test memo2", memo2.Content)
 	memoList, err = s.getMemoList()
 	require.NoError(t, err)
-	require.Len(t, memoList, 2)
+	require.Len(t, memoList, 3)
 	require.Len(t, memo2.RelationList, 1)
 	err = s.deleteMemoRelation(memo2.ID, memo.ID, api.MemoRelationReference)
 	require.NoError(t, err)

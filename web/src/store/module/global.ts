@@ -13,8 +13,10 @@ export const initialGlobalState = async () => {
       allowSignUp: false,
       ignoreUpgrade: false,
       disablePublicMemos: false,
+      maxUploadSizeMiB: 0,
       additionalStyle: "",
       additionalScript: "",
+      memoDisplayWithUpdatedTs: false,
       customizedProfile: {
         name: "memos",
         logoUrl: "/logo.webp",
@@ -48,8 +50,9 @@ export const initialGlobalState = async () => {
         externalUrl: "",
       },
     };
-    defaultGlobalState.locale = storageLocale || findNearestLanguageMatch(i18n.language);
-    defaultGlobalState.appearance = customizedProfile.appearance;
+    defaultGlobalState.locale =
+      storageLocale || defaultGlobalState.systemStatus.customizedProfile.locale || findNearestLanguageMatch(i18n.language);
+    defaultGlobalState.appearance = defaultGlobalState.systemStatus.customizedProfile.appearance;
   }
   store.dispatch(setGlobalState(defaultGlobalState));
 };

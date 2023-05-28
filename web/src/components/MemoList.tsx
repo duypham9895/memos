@@ -8,6 +8,8 @@ import { DEFAULT_MEMO_LIMIT } from "@/helpers/consts";
 import { checkShouldShowMemoWithFilters } from "@/helpers/filter";
 import Memo from "./Memo";
 import "@/less/memo-list.less";
+import { PLAIN_LINK_REG } from "@/labs/marked/parser";
+import copy from "copy-to-clipboard";
 
 const MemoList = () => {
   const { t } = useTranslation();
@@ -54,14 +56,14 @@ const MemoList = () => {
           if (
             duration &&
             duration.from < duration.to &&
-            (getTimeStampByDate(memo.createdTs) < duration.from || getTimeStampByDate(memo.createdTs) > duration.to)
+            (getTimeStampByDate(memo.displayTs) < duration.from || getTimeStampByDate(memo.displayTs) > duration.to)
           ) {
             shouldShow = false;
           }
           if (memoType) {
             if (memoType === "NOT_TAGGED" && memo.content.match(TAG_REG) !== null) {
               shouldShow = false;
-            } else if (memoType === "LINKED" && memo.content.match(LINK_REG) === null) {
+            } else if (memoType === "LINKED" && (memo.content.match(LINK_REG) === null || memo.content.match(PLAIN_LINK_REG) === null)) {
               shouldShow = false;
             }
           }
@@ -80,7 +82,7 @@ const MemoList = () => {
   const pinnedMemos = shownMemos.filter((m) => m.pinned);
   const unpinnedMemos = shownMemos.filter((m) => !m.pinned);
   const memoSort = (mi: Memo, mj: Memo) => {
-    return mj.createdTs - mi.createdTs;
+    return mj.displayTs - mi.displayTs;
   };
   pinnedMemos.sort(memoSort);
   unpinnedMemos.sort(memoSort);
@@ -148,10 +150,25 @@ const MemoList = () => {
     }
   };
 
+  useEffect(() => {
+    window.addEventListener("copy", handleCopy);
+    return () => {
+      window.removeEventListener("copy", handleCopy);
+    };
+  }, []);
+
+  const handleCopy = (event: ClipboardEvent) => {
+    event.preventDefault();
+    const rawStr = document.getSelection()?.toString();
+    if (rawStr !== undefined) {
+      copy(rawStr.split("\n\n").join("\n"));
+    }
+  };
+
   return (
     <div className="memo-list-container">
       {sortedMemos.map((memo) => (
-        <Memo key={`${memo.id}-${memo.createdTs}`} memo={memo} />
+        <Memo key={`${memo.id}-${memo.displayTs}`} memo={memo} />
       ))}
       {isFetching ? (
         <div className="status-text-container fetching-tip">

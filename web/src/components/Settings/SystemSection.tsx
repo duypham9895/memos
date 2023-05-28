@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useTranslation } from "react-i18next";
-import { Button, Divider, Input, Switch, Textarea, Typography } from "@mui/joy";
+import { Button, Divider, Input, Switch, Textarea } from "@mui/joy";
 import { formatBytes } from "@/helpers/utils";
 import { useGlobalStore } from "@/store/module";
 import * as api from "@/helpers/api";
-import Icon from "../Icon";
+import HelpButton from "../kit/HelpButton";
 import showUpdateCustomizedProfileDialog from "../UpdateCustomizedProfileDialog";
 import "@/less/settings/system-section.less";
 
@@ -16,6 +16,8 @@ interface State {
   disablePublicMemos: boolean;
   additionalStyle: string;
   additionalScript: string;
+  maxUploadSizeMiB: number;
+  memoDisplayWithUpdatedTs: boolean;
 }
 
 const SystemSection = () => {
@@ -29,7 +31,10 @@ const SystemSection = () => {
     additionalStyle: systemStatus.additionalStyle,
     additionalScript: systemStatus.additionalScript,
     disablePublicMemos: systemStatus.disablePublicMemos,
+    maxUploadSizeMiB: systemStatus.maxUploadSizeMiB,
+    memoDisplayWithUpdatedTs: systemStatus.memoDisplayWithUpdatedTs,
   });
+  const [telegramRobotToken, setTelegramRobotToken] = useState<string>("");
   const [openAIConfig, setOpenAIConfig] = useState<OpenAIConfig>({
     key: "",
     host: "",
@@ -45,6 +50,11 @@ const SystemSection = () => {
       if (openAIConfigSetting) {
         setOpenAIConfig(JSON.parse(openAIConfigSetting.value));
       }
+
+      const telegramRobotSetting = systemSettings.find((setting) => setting.name === "telegram-robot-token");
+      if (telegramRobotSetting) {
+        setTelegramRobotToken(telegramRobotSetting.value);
+      }
     });
   }, []);
 
@@ -56,6 +66,8 @@ const SystemSection = () => {
       additionalStyle: systemStatus.additionalStyle,
       additionalScript: systemStatus.additionalScript,
       disablePublicMemos: systemStatus.disablePublicMemos,
+      maxUploadSizeMiB: systemStatus.maxUploadSizeMiB,
+      memoDisplayWithUpdatedTs: systemStatus.memoDisplayWithUpdatedTs,
     });
   }, [systemStatus]);
 
@@ -123,6 +135,24 @@ const SystemSection = () => {
     toast.success("OpenAI Config updated");
   };
 
+  const handleTelegramRobotTokenChanged = (value: string) => {
+    setTelegramRobotToken(value);
+  };
+
+  const handleSaveTelegramRobotToken = async () => {
+    try {
+      await api.upsertSystemSetting({
+        name: "telegram-robot-token",
+        value: telegramRobotToken,
+      });
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.response.data.message);
+      return;
+    }
+    toast.success("OpenAI Config updated");
+  };
+
   const handleAdditionalStyleChanged = (value: string) => {
     setState({
       ...state,
@@ -175,6 +205,42 @@ const SystemSection = () => {
     });
   };
 
+  const handleMemoDisplayWithUpdatedTs = async (value: boolean) => {
+    setState({
+      ...state,
+      memoDisplayWithUpdatedTs: value,
+    });
+    globalStore.setSystemStatus({ disablePublicMemos: value });
+    await api.upsertSystemSetting({
+      name: "memo-display-with-updated-ts",
+      value: JSON.stringify(value),
+    });
+  };
+
+  const handleMaxUploadSizeChanged = async (event: React.FocusEvent<HTMLInputElement>) => {
+    // fixes cursor skipping position on mobile
+    event.target.selectionEnd = event.target.value.length;
+
+    let num = parseInt(event.target.value);
+    if (Number.isNaN(num)) {
+      num = 0;
+    }
+    setState({
+      ...state,
+      maxUploadSizeMiB: num,
+    });
+    event.target.value = num.toString();
+    globalStore.setSystemStatus({ maxUploadSizeMiB: num });
+    await api.upsertSystemSetting({
+      name: "max-upload-size-mib",
+      value: JSON.stringify(num),
+    });
+  };
+
+  const handleMaxUploadSizeFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    event.target.select();
+  };
+
   return (
     <div className="section-container system-section-container">
       <p className="title-text">{t("common.basic")}</p>
@@ -185,7 +251,7 @@ const SystemSection = () => {
         <Button onClick={handleUpdateCustomizedProfileButtonClick}>{t("common.edit")}</Button>
       </div>
       <div className="form-label">
-        <span className="normal-text">
+        <span className="text-sm">
           {t("setting.system-section.database-file-size")}: <span className="font-mono font-bold">{formatBytes(state.dbSize)}</span>
         </span>
         <Button onClick={handleVacuumBtnClick}>{t("common.vacuum")}</Button>
@@ -203,19 +269,51 @@ const SystemSection = () => {
         <span className="normal-text">{t("setting.system-section.disable-public-memos")}</span>
         <Switch checked={state.disablePublicMemos} onChange={(event) => handleDisablePublicMemosChanged(event.target.checked)} />
       </div>
+      <div className="form-label">
+        <span className="normal-text">Display with updated time</span>
+        <Switch checked={state.memoDisplayWithUpdatedTs} onChange={(event) => handleMemoDisplayWithUpdatedTs(event.target.checked)} />
+      </div>
+      <div className="form-label">
+        <div className="flex flex-row items-center">
+          <span className="text-sm mr-1">{t("setting.system-section.max-upload-size")}</span>
+          <HelpButton icon="info" hint={t("setting.system-section.max-upload-size-hint")} />
+        </div>
+        <Input
+          className="w-16"
+          sx={{
+            fontFamily: "monospace",
+          }}
+          defaultValue={state.maxUploadSizeMiB}
+          onFocus={handleMaxUploadSizeFocus}
+          onChange={handleMaxUploadSizeChanged}
+        />
+      </div>
       <Divider className="!mt-3 !my-4" />
       <div className="form-label">
-        <span className="normal-text">{t("setting.system-section.openai-api-key")}</span>
-        <Typography className="!mb-1" level="body2">
-          <a
-            className="ml-2 text-sm text-blue-600 hover:opacity-80 hover:underline"
-            href="https://platform.openai.com/account/api-keys"
-            target="_blank"
-          >
-            {t("setting.system-section.openai-api-key-description")}
-            <Icon.ExternalLink className="inline -mt-1 ml-1 w-4 h-auto opacity-80" />
-          </a>
-        </Typography>
+        <div className="flex flex-row items-center">
+          <div className="w-auto flex items-center">
+            <span className="text-sm mr-1">{t("setting.system-section.telegram-robot-token")}</span>
+            <HelpButton icon="help" url="https://usememos.com/docs/integration/telegram-bot" />
+          </div>
+        </div>
+        <Button onClick={handleSaveTelegramRobotToken}>{t("common.save")}</Button>
+      </div>
+      <Input
+        className="w-full"
+        sx={{
+          fontFamily: "monospace",
+          fontSize: "14px",
+        }}
+        placeholder={t("setting.system-section.telegram-robot-token-placeholder")}
+        value={telegramRobotToken}
+        onChange={(event) => handleTelegramRobotTokenChanged(event.target.value)}
+      />
+      <Divider className="!mt-3 !my-4" />
+      <div className="form-label">
+        <div className="flex flex-row items-center">
+          <span className="text-sm mr-1">{t("setting.system-section.openai-api-key")}</span>
+          <HelpButton hint={t("setting.system-section.openai-api-key-description")} url="https://platform.openai.com/account/api-keys" />
+        </div>
         <Button onClick={handleSaveOpenAIConfig}>{t("common.save")}</Button>
       </div>
       <Input
