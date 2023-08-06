@@ -34,7 +34,6 @@
     "sign-out": "Esci",
     "back-to-home": "Ritorna alla Home",
     "type": "Tipo",
-    "shortcuts": "Scorciatoie",
     "title": "Titolo",
     "filter": "Filtro",
     "tags": "Etichette",
@@ -49,7 +48,8 @@
     "vacuum": "Pulisci",
     "select": "Seleziona",
     "avatar": "Avatar",
-    "database": "Database"
+    "database": "Database",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "Registrati come Host",
@@ -107,15 +107,6 @@
   "memo-list": {
     "fetching-data": "recupero i dati...",
     "fetch-more": "Clicca per caricare più dati"
-  },
-  "shortcut-list": {
-    "shortcut-title": "titolo Scorciatoia",
-    "create-shortcut": "Crea Scorciatoia",
-    "edit-shortcut": "Modifica Scorciatoia",
-    "eligible-memo": "eligible memo",
-    "fill-previous": "Compila il valore del filtro precedente",
-    "title-required": "Il titolo è obbligatorio",
-    "value-required": "Il valore del filtro è obbligatorio"
   },
   "filter": {
     "new-filter": "Nuovo Filtro",
@@ -185,7 +176,8 @@
       "additional-script": "Script aggiuntivo",
       "additional-style-placeholder": "Codice CSS aggiuntivo",
       "additional-script-placeholder": "Codice JavaScript aggiuntivo",
-      "disable-public-memos": "Disable public memos"
+      "disable-public-memos": "Disable public memos",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Sistema",

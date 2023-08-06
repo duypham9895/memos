@@ -1,21 +1,21 @@
-import { Select, Option } from "@mui/joy";
+import { Option, Select } from "@mui/joy";
+import copy from "copy-to-clipboard";
+import { toLower } from "lodash-es";
 import { QRCodeSVG } from "qrcode.react";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useTranslation } from "react-i18next";
-import copy from "copy-to-clipboard";
-import { toLower } from "lodash-es";
-import toImage from "@/labs/html2image";
-import { useGlobalStore, useMemoStore, useUserStore } from "@/store/module";
+import { getMemoStats } from "@/helpers/api";
 import { VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
 import { getDateTimeString, getTimeStampByDate } from "@/helpers/datetime";
-import { getMemoStats } from "@/helpers/api";
 import useLoading from "@/hooks/useLoading";
-import Icon from "./Icon";
+import toImage from "@/labs/html2image";
+import { useGlobalStore, useMemoStore, useUserStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 import { generateDialog } from "./Dialog";
+import showEmbedMemoDialog from "./EmbedMemoDialog";
+import Icon from "./Icon";
 import MemoContent from "./MemoContent";
 import MemoResourceListView from "./MemoResourceListView";
-import showEmbedMemoDialog from "./EmbedMemoDialog";
 import "@/less/share-memo-dialog.less";
 
 interface Props extends DialogProps {
@@ -30,7 +30,7 @@ interface State {
 
 const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const { memo: propsMemo, destroy } = props;
-  const { t } = useTranslation();
+  const t = useTranslate();
   const userStore = useUserStore();
   const memoStore = useMemoStore();
   const globalStore = useGlobalStore();
@@ -51,8 +51,8 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const createdDays = Math.ceil((Date.now() - getTimeStampByDate(user.createdTs)) / 1000 / 3600 / 24);
 
   useEffect(() => {
-    getMemoStats(user.id)
-      .then(({ data: { data } }) => {
+    getMemoStats(user.username)
+      .then(({ data }) => {
         setPartialState({
           memoAmount: data.length,
         });
@@ -109,7 +109,7 @@ const ShareMemoDialog: React.FC<Props> = (props: Props) => {
   const memoVisibilityOptionSelectorItems = VISIBILITY_SELECTOR_ITEMS.map((item) => {
     return {
       value: item.value,
-      text: t(`memo.visibility.${toLower(item.value)}`),
+      text: t(`memo.visibility.${toLower(item.value) as Lowercase<typeof item.value>}`),
     };
   });
 

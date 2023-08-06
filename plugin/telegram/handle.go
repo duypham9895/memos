@@ -2,61 +2,36 @@ package telegram
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/usememos/memos/common/log"
-	"go.uber.org/zap"
 )
 
-// notice message send to telegram.
-const (
-	workingMessage = "Working on send your memo..."
-	successMessage = "Success"
-)
+// handleSingleMessages handle single messages not belongs to group.
+func (b *Bot) handleSingleMessages(ctx context.Context, messages []Message) error {
+	var attachments []Attachment
 
-// handleSingleMessage handle a message not belongs to group.
-func (r *Robot) handleSingleMessage(ctx context.Context, message Message) error {
-	reply, err := r.SendReplyMessage(ctx, message.Chat.ID, message.MessageID, workingMessage)
-	if err != nil {
-		return fmt.Errorf("fail to SendReplyMessage: %s", err)
-	}
-
-	var blobs map[string][]byte
-
-	// download blob if need
-	if len(message.Photo) > 0 {
-		filepath, blob, err := r.downloadFileID(ctx, message.GetMaxPhotoFileID())
+	for _, message := range messages {
+		attachment, err := b.downloadAttachment(ctx, &message)
 		if err != nil {
-			log.Error("fail to downloadFileID", zap.Error(err))
-			_, err = r.EditMessage(ctx, message.Chat.ID, reply.MessageID, err.Error())
-			if err != nil {
-				return fmt.Errorf("fail to EditMessage: %s", err)
-			}
-			return fmt.Errorf("fail to downloadFileID: %s", err)
+			return err
 		}
-		blobs = map[string][]byte{filepath: blob}
-	}
 
-	err = r.handler.MessageHandle(ctx, message, blobs)
-	if err != nil {
-		if _, err := r.EditMessage(ctx, message.Chat.ID, reply.MessageID, err.Error()); err != nil {
-			return fmt.Errorf("fail to EditMessage: %s", err)
+		if attachment != nil {
+			attachments = append(attachments, *attachment)
 		}
-		return fmt.Errorf("fail to MessageHandle: %s", err)
-	}
 
-	if _, err := r.EditMessage(ctx, message.Chat.ID, reply.MessageID, successMessage); err != nil {
-		return fmt.Errorf("fail to EditMessage: %s", err)
+		err = b.handler.MessageHandle(ctx, b, message, attachments)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 // handleGroupMessages handle a message belongs to group.
-func (r *Robot) handleGroupMessages(ctx context.Context, groupMessages []Message) error {
+func (b *Bot) handleGroupMessages(ctx context.Context, groupMessages []Message) error {
 	captions := make(map[string]string, len(groupMessages))
 	messages := make(map[string]Message, len(groupMessages))
-	blobs := make(map[string]map[string][]byte, len(groupMessages))
+	attachments := make(map[string][]Attachment, len(groupMessages))
 
 	// Group all captions, blobs and messages
 	for _, message := range groupMessages {
@@ -68,35 +43,24 @@ func (r *Robot) handleGroupMessages(ctx context.Context, groupMessages []Message
 			captions[groupID] += *message.Caption
 		}
 
-		filepath, blob, err := r.downloadFileID(ctx, message.GetMaxPhotoFileID())
+		attachment, err := b.downloadAttachment(ctx, &message)
 		if err != nil {
-			return fmt.Errorf("fail to downloadFileID")
+			return err
 		}
-		if _, found := blobs[groupID]; !found {
-			blobs[groupID] = make(map[string][]byte)
+
+		if attachment != nil {
+			attachments[groupID] = append(attachments[groupID], *attachment)
 		}
-		blobs[groupID][filepath] = blob
 	}
 
 	// Handle each group message
 	for groupID, message := range messages {
-		reply, err := r.SendReplyMessage(ctx, message.Chat.ID, message.MessageID, workingMessage)
-		if err != nil {
-			return fmt.Errorf("fail to SendReplyMessage: %s", err)
-		}
-
 		// replace Caption with all Caption in the group
 		caption := captions[groupID]
 		message.Caption = &caption
-		if err := r.handler.MessageHandle(ctx, message, blobs[groupID]); err != nil {
-			if _, err = r.EditMessage(ctx, message.Chat.ID, reply.MessageID, err.Error()); err != nil {
-				return fmt.Errorf("fail to EditMessage: %s", err)
-			}
-			return fmt.Errorf("fail to MessageHandle: %s", err)
-		}
-
-		if _, err := r.EditMessage(ctx, message.Chat.ID, reply.MessageID, successMessage); err != nil {
-			return fmt.Errorf("fail to EditMessage: %s", err)
+		err := b.handler.MessageHandle(ctx, b, message, attachments[groupID])
+		if err != nil {
+			return err
 		}
 	}
 

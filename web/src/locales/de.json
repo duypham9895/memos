@@ -34,7 +34,6 @@
     "sign-out": "Abmelden",
     "back-to-home": "Zurück zur Startseite",
     "type": "Typ",
-    "shortcuts": "Verknüpfungen",
     "title": "Titel",
     "filter": "Filter",
     "tags": "Tags",
@@ -49,7 +48,8 @@
     "vacuum": "Aufräumen",
     "select": "Auswählen",
     "avatar": "Avatar",
-    "database": "Database"
+    "database": "Database",
+    "mark": "Mark"
   },
   "auth": {
     "signup-as-host": "Als Host registrieren",
@@ -96,7 +96,7 @@
   "memo": {
     "view-detail": "Details anzeigen",
     "copy": "Kopieren",
-    "copy-link":"Link Kopieren",
+    "copy-link": "Link Kopieren",
     "visibility": {
       "private": "Nur für dich sichtbar",
       "protected": "Für Mitglieder sichtbar",
@@ -107,15 +107,6 @@
   "memo-list": {
     "fetching-data": "Lade Daten...",
     "fetch-more": "Klicke hier, um mehr zu laden"
-  },
-  "shortcut-list": {
-    "shortcut-title": "Titel der Verknüpfung",
-    "create-shortcut": "Verknüpfung erstellen",
-    "edit-shortcut": "Verknüpfung bearbeiten",
-    "fill-previous": "Bitte vorherigen Filterwert ausfüllen",
-    "title-required": "Titel wird benötigt",
-    "value-required": "Filterwert wird benötigt",
-    "eligible-memo": "eligible memo"
   },
   "filter": {
     "new-filter": "Neuer Filter",
@@ -185,7 +176,8 @@
       "additional-script": "Zusätzliches Skript",
       "additional-style-placeholder": "Zusätzliches CSS",
       "additional-script-placeholder": "Zusätzliches JavaScript",
-      "disable-public-memos": "Disable public memos"
+      "disable-public-memos": "Disable public memos",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "System",

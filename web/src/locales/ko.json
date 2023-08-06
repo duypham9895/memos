@@ -38,7 +38,6 @@
     "sign-up": "회원등록",
     "sign-out": "로그아웃",
     "type": "타입",
-    "shortcuts": "바로가기",
     "title": "제목",
     "filter": "필터",
     "filter-period": "{{from}} 부터 {{to}}",
@@ -67,7 +66,8 @@
       "info": "정보",
       "success": "성공",
       "warning": "경고"
-    }
+    },
+    "mark": "Mark"
   },
   "router": {
     "back-to-home": "홈으로 돌아가기"
@@ -125,6 +125,7 @@
     "upload-successfully": "성공적으로 업로드했습니다",
     "file-drag-drop-prompt": "업로드할 파일을 여기에 드래그하세요",
     "search-bar-placeholder": "리소스 검색하기",
+    "clear": "Clear",
     "create-dialog": {
       "title": "리소스 생성",
       "upload-method": "업로드 방법",
@@ -142,15 +143,6 @@
         "type-placeholder": "파일 종류"
       }
     }
-  },
-  "shortcut-list": {
-    "shortcut-title": "바로가기 이름",
-    "create-shortcut": "바로가기 생성",
-    "edit-shortcut": "바로가기 변경",
-    "eligible-memo": "해당하는 메모",
-    "fill-previous": "위의 필터 값을 채워주세요",
-    "title-required": "제목이 있어야 합니다",
-    "value-required": "필터 값이 있어야 합니다"
   },
   "tag-list": {
     "tip-text": "`#태그명`을 입력하세요",
@@ -258,14 +250,15 @@
       "additional-script": "추가적인 스크립트",
       "additional-style-placeholder": "추가적인 CSS 코드",
       "additional-script-placeholder": "추가적인 JavaScript 코드",
-      "telegram-robot-token": "텔레그램 봇 연동",
-      "telegram-robot-token-description": "텔레그램 @BotFather 에서 얻을 수 있습니다",
-      "telegram-robot-token-placeholder": "서버의 텔레그램 봇 토큰",
+      "telegram-bot-token": "텔레그램 봇 연동",
+      "telegram-bot-token-description": "텔레그램 @BotFather 에서 얻을 수 있습니다",
+      "telegram-bot-token-placeholder": "서버의 텔레그램 봇 토큰",
       "openai-api-key": "OpenAI: API 키",
       "openai-api-key-description": "API 키 받아오기",
       "openai-api-key-placeholder": "내 OpenAI API 키",
       "openai-api-host": "OpenAI: API 호스트",
-      "openai-api-host-placeholder": "기본값: https://api.openai.com/"
+      "openai-api-host-placeholder": "기본값: https://api.openai.com/",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "기본값 사용",

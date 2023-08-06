@@ -1,5 +1,9 @@
 type Appearance = "system" | "light" | "dark";
 
+interface BasicSetting {
+  locale: Locale;
+  appearance: Appearance;
+}
 interface Setting {
   locale: Locale;
   appearance: Appearance;
@@ -9,8 +13,8 @@ interface Setting {
 
 interface LocalSetting {
   enableDoubleClickEditing: boolean;
-  dailyReviewTimeOffset: number;
   enableAutoCollapse: boolean;
+  dailyReviewTimeOffset: number;
 }
 
 interface UserLocaleSetting {

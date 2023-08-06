@@ -38,7 +38,6 @@
     "sign-up": "Sign up",
     "sign-out": "Sign out",
     "type": "Type",
-    "shortcuts": "Shortcuts",
     "title": "Title",
     "filter": "Filter",
     "filter-period": "{{from}} to {{to}}",
@@ -59,15 +58,16 @@
     "name": "Name",
     "visibility": "Visibility",
     "learn-more": "Learn more",
-    "e.g": "e.g.",
     "beta": "Beta",
+    "new": "New",
     "dialog": {
       "error": "Error",
       "help": "Help",
       "info": "Information",
       "success": "Success",
       "warning": "Warning"
-    }
+    },
+    "mark": "Mark"
   },
   "router": {
     "back-to-home": "Back to Home"
@@ -125,6 +125,7 @@
     "upload-successfully": "Upload successfully",
     "file-drag-drop-prompt": "Drag and drop your file here to upload file",
     "search-bar-placeholder": "Search resource",
+    "clear": "Clear",
     "create-dialog": {
       "title": "Create Resource",
       "upload-method": "Upload method",
@@ -140,17 +141,11 @@
         "file-name-placeholder": "File name",
         "type": "Type",
         "type-placeholder": "File type"
+      },
+      "download-link": {
+        "option": "Download link"
       }
     }
-  },
-  "shortcut-list": {
-    "shortcut-title": "shortcut title",
-    "create-shortcut": "Create Shortcut",
-    "edit-shortcut": "Edit Shortcut",
-    "eligible-memo": "eligible memo",
-    "fill-previous": "Please fill in previous filter value",
-    "title-required": "Title is required",
-    "value-required": "Filter value is required"
   },
   "tag-list": {
     "tip-text": "Input `#tag` to create",
@@ -168,6 +163,7 @@
     "member": "Member",
     "member-list": "Member list",
     "system": "System",
+    "openai": "OpenAI",
     "storage": "Storage",
     "sso": "SSO",
     "account-section": {
@@ -193,7 +189,7 @@
       "mobile-editor-style": "Mobile editor style",
       "default-memo-sort-option": "Memo display time",
       "telegram-user-id": "Telegram UserID",
-      "telegram-user-id-placeholder": "Send any words to Your Telegram Robot to get",
+      "telegram-user-id-placeholder": "Send any words to Your Telegram Bot to get",
       "created_ts": "Created Time",
       "updated_ts": "Updated Time",
       "daily-review-time-offset": "Daily Review Time Offset",
@@ -250,22 +246,30 @@
       },
       "database-file-size": "Database File Size",
       "allow-user-signup": "Allow user signup",
+      "disable-password-login": "Disable password login",
+      "disable-password-login-warning": "This will disable password login for all users. It is not possible to log in without reverting this setting in the database if your configured identity providers fail. You'll also have to be extra carefull when removing an identity provider❗",
+      "disable-password-login-final-warning": "Please type \"CONFIRM\" if you know what you are doing.",
+      "enable-password-login": "Enable password login",
+      "enable-password-login-warning": "This will enable password login for all users. Continue only if you want to users to be able to log in using both SSO and password❗",
       "ignore-version-upgrade": "Ignore version upgrade",
       "disable-public-memos": "Disable public memos",
       "max-upload-size": "Maximum upload size (MiB)",
       "max-upload-size-hint": "Recommended value is 32 MiB.",
+      "auto-backup-interval": "Auto backup interval (seconds)",
+      "auto-backup-interval-hint": "Set 0 to disable auto backup. Reboot is required after changing this value.",
       "additional-style": "Additional style",
       "additional-script": "Additional script",
       "additional-style-placeholder": "Additional CSS code",
       "additional-script-placeholder": "Additional JavaScript code",
-      "telegram-robot-token": "Telegram Robot Token",
-      "telegram-robot-token-description": "Get from @BotFather of Telegram",
-      "telegram-robot-token-placeholder": "Your Telegram Robot token",
+      "telegram-bot-token": "Telegram Bot Token",
+      "telegram-bot-token-description": "Telegram Bot Token or API Proxy like `http.../bot<token>`",
+      "telegram-bot-token-placeholder": "Your Telegram Bot token",
       "openai-api-key": "OpenAI: API Key",
       "openai-api-key-description": "Get API key",
       "openai-api-key-placeholder": "Your OpenAI API Key",
       "openai-api-host": "OpenAI: API Host",
-      "openai-api-host-placeholder": "Default: https://api.openai.com/"
+      "openai-api-host-placeholder": "Default: https://api.openai.com/",
+      "display-with-updated-time": "Display with updated time"
     },
     "appearance-option": {
       "system": "Follow system",
@@ -291,7 +295,8 @@
       "authorization-endpoint": "Authorization endpoint",
       "token-endpoint": "Token endpoint",
       "user-endpoint": "User endpoint",
-      "scopes": "Scopes"
+      "scopes": "Scopes",
+      "disabled-password-login-warning": "Password-login is disabled, be extra careful when removing identity providers❗"
     }
   },
   "filter": {
@@ -320,10 +325,17 @@
     "and": "And",
     "or": "Or"
   },
+  "amount-text": {
+    "memo_one": "MEMO",
+    "memo_other": "MEMOS",
+    "tag_one": "TAG",
+    "tag_other": "TAGS",
+    "day_one": "TAG",
+    "day_other": "TAGE"
+  },
   "message": {
-    "no-memos": "no memos 🌃",
+    "no-data": "Maybe no data was found, maybe it should be another option.",
     "memos-ready": "all memos are ready 🎉",
-    "no-resource": "no resource 🌃",
     "resource-ready": "all resource are ready 🎉",
     "restored-successfully": "Restored successfully",
     "memo-updated-datetime": "Memo created datetime changed.",
@@ -365,7 +377,9 @@
     "update-succeed": "Update succeeded",
     "page-not-found": "404 - Page Not Found 😥",
     "maximum-upload-size-is": "Maximum allowed upload size is {{size}} MiB",
-    "file-exceeds-upload-limit-of": "File {{file}} exceeds upload limit of {{size}} MiB"
+    "file-exceeds-upload-limit-of": "File {{file}} exceeds upload limit of {{size}} MiB",
+    "updating-setting-failed": "Updating setting failed",
+    "password-login-disabled": "Can't remove last identity provider when password login is disabled"
   },
   "days": {
     "mon": "Mon",
@@ -375,15 +389,6 @@
     "fri": "Fri",
     "sat": "Sat",
     "sun": "Sun"
-  },
-  "ask-ai": {
-    "title": "Ask AI",
-    "not-enabled": "You have not set up your OpenAI API key.",
-    "go-to-settings": "Go to settings",
-    "placeholder": "Ask anything…",
-    "default-message-group-title": "Default Session",
-    "create-message-group-title": "Create Session",
-    "label-message-group-name-title": "Session Name"
   },
   "embed-memo": {
     "title": "Embed Memo",

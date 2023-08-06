@@ -1,33 +1,29 @@
 import { toLower } from "lodash-es";
-import { useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
-import { useEditorStore, useGlobalStore } from "@/store/module";
 import Selector from "@/components/kit/Selector";
+import { VISIBILITY_SELECTOR_ITEMS } from "@/helpers/consts";
+import { useGlobalStore } from "@/store/module";
+import { useTranslate } from "@/utils/i18n";
 
-const MemoVisibilitySelector = () => {
-  const { t } = useTranslation();
-  const editorStore = useEditorStore();
+interface Props {
+  value: Visibility;
+  onChange: (value: Visibility) => void;
+}
+
+const MemoVisibilitySelector = (props: Props) => {
+  const { value, onChange } = props;
+  const t = useTranslate();
   const {
     state: { systemStatus },
   } = useGlobalStore();
-  const editorState = editorStore.state;
   const memoVisibilityOptionSelectorItems = VISIBILITY_SELECTOR_ITEMS.map((item) => {
     return {
       value: item.value,
-      text: t(`memo.visibility.${toLower(item.value)}`),
+      text: t(`memo.visibility.${toLower(item.value) as Lowercase<typeof item.value>}`),
     };
   });
 
-  useEffect(() => {
-    if (systemStatus.disablePublicMemos) {
-      editorStore.setMemoVisibility("PRIVATE");
-    }
-  }, [systemStatus.disablePublicMemos, editorState.memoVisibility]);
-
-  const handleMemoVisibilityOptionChanged = async (value: string) => {
-    const visibilityValue = value as Visibility;
-    editorStore.setMemoVisibility(visibilityValue);
+  const handleMemoVisibilityOptionChanged = async (visibility: string) => {
+    onChange(visibility as Visibility);
   };
 
   return (
@@ -35,7 +31,7 @@ const MemoVisibilitySelector = () => {
       className="visibility-selector"
       disabled={systemStatus.disablePublicMemos}
       tooltipTitle={t("memo.visibility.disabled")}
-      value={editorState.memoVisibility}
+      value={value}
       dataSource={memoVisibilityOptionSelectorItems}
       handleValueChanged={handleMemoVisibilityOptionChanged}
     />
